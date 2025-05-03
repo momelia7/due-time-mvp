@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Forms;
 using DueTime.Tracking;
 using DueTime.Data;
 
@@ -13,11 +14,86 @@ namespace DueTime.UI
     public partial class MainWindow : Window
     {
         private ITrackingService? _trackingService;
+        private NotifyIcon? _notifyIcon;
+        private bool _hasShownTrayNotification = false;
         
         public MainWindow()
         {
             InitializeComponent();
             Loaded += MainWindow_Loaded;
+            SourceInitialized += MainWindow_SourceInitialized;
+        }
+        
+        private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+        {
+            SetupTrayIcon();
+        }
+        
+        private void SetupTrayIcon()
+        {
+            // Create the NotifyIcon
+            _notifyIcon = new NotifyIcon();
+            
+            // Try to extract icon from the executable
+            try
+            {
+                var process = System.Diagnostics.Process.GetCurrentProcess();
+                _notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(process.MainModule?.FileName ?? "");
+            }
+            catch
+            {
+                // If icon extraction fails, the NotifyIcon will just use a default icon
+            }
+            
+            _notifyIcon.Visible = true;
+            _notifyIcon.Text = "DueTime (tracking active)";
+            
+            // Create context menu
+            var contextMenu = new ContextMenuStrip();
+            
+            var openItem = contextMenu.Items.Add("Open Dashboard");
+            openItem.Click += (s, e) => 
+            { 
+                System.Windows.Application.Current.Dispatcher.Invoke(() => 
+                {
+                    this.Show();
+                    this.WindowState = WindowState.Normal;
+                    this.Activate();
+                });
+            };
+            
+            contextMenu.Items.Add("-"); // Separator
+            
+            var exitItem = contextMenu.Items.Add("Exit");
+            exitItem.Click += (s, e) => 
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() => 
+                {
+                    // True exit - cleanup and close
+                    CleanupAndExit();
+                });
+            };
+            
+            _notifyIcon.ContextMenuStrip = contextMenu;
+            
+            // Double-click to open main window
+            _notifyIcon.DoubleClick += (s, e) => 
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() => 
+                {
+                    this.Show();
+                    this.WindowState = WindowState.Normal;
+                    this.Activate();
+                });
+            };
+            
+            // Show welcome notification on first run
+            if (AppState.IsFirstRun)
+            {
+                _notifyIcon.BalloonTipTitle = "Welcome to DueTime";
+                _notifyIcon.BalloonTipText = "Time tracking has started automatically. You can always find DueTime here in the system tray.";
+                _notifyIcon.ShowBalloonTip(5000);
+            }
         }
         
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -114,8 +190,43 @@ namespace DueTime.UI
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            base.OnClosing(e);
+            if (_notifyIcon != null)
+            {
+                // Cancel the close operation and hide the window instead
+                e.Cancel = true;
+                this.Hide();
+                
+                // Show notification that app is still running (only once per session)
+                if (!_hasShownTrayNotification)
+                {
+                    _notifyIcon.BalloonTipTitle = "DueTime is still running";
+                    _notifyIcon.BalloonTipText = "DueTime will continue tracking in the background. You can find it in the system tray.";
+                    _notifyIcon.ShowBalloonTip(3000);
+                    _hasShownTrayNotification = true;
+                }
+            }
+            else
+            {
+                // If we're really exiting, stop tracking
+                _trackingService?.Stop();
+            }
+        }
+        
+        private void CleanupAndExit()
+        {
+            // Dispose of the NotifyIcon before exiting
+            if (_notifyIcon != null)
+            {
+                _notifyIcon.Visible = false;
+                _notifyIcon.Dispose();
+                _notifyIcon = null;
+            }
+            
+            // Stop tracking
             _trackingService?.Stop();
+            
+            // Close the window (this time it won't be canceled)
+            this.Close();
         }
     }
 } 

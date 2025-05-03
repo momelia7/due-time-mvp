@@ -94,6 +94,20 @@ namespace DueTime.UI.Views
 
         private void SaveApiKey_Click(object sender, RoutedEventArgs e)
         {
+            SaveApiKey();
+        }
+        
+        private void ApiKeyPasswordBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                SaveApiKey();
+                e.Handled = true;
+            }
+        }
+        
+        private void SaveApiKey()
+        {
             string apiKey = ApiKeyPasswordBox.Password;
             
             if (string.IsNullOrWhiteSpace(apiKey))

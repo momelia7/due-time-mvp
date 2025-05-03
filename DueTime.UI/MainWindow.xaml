@@ -6,16 +6,18 @@
         xmlns:local="clr-namespace:DueTime.UI"
         xmlns:views="clr-namespace:DueTime.UI.Views"
         mc:Ignorable="d"
-        Title="DueTime - Time Tracking" Height="600" Width="900">
+        Title="DueTime - Time Tracking" 
+        Height="600" Width="900"
+        MinHeight="450" MinWidth="650">
     <Grid>
-        <TabControl>
-            <TabItem Header="Dashboard">
+        <TabControl AutomationProperties.Name="Main Navigation">
+            <TabItem Header="_Dashboard" AutomationProperties.Name="Dashboard Tab">
                 <views:DashboardView />
             </TabItem>
-            <TabItem Header="Projects">
+            <TabItem Header="_Projects" AutomationProperties.Name="Projects Tab">
                 <views:ProjectsView />
             </TabItem>
-            <TabItem Header="Settings">
+            <TabItem Header="_Settings" AutomationProperties.Name="Settings Tab">
                 <views:SettingsView />
             </TabItem>
         </TabControl>

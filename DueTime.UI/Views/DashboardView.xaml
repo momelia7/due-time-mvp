@@ -22,7 +22,9 @@
         <!-- Time Entries Grid -->
         <DataGrid x:Name="EntriesDataGrid" Grid.Row="1" Margin="10" 
                   AutoGenerateColumns="False" IsReadOnly="False"
-                  ItemsSource="{Binding Source={x:Static local:AppState.Entries}}">
+                  ItemsSource="{Binding Source={x:Static local:AppState.Entries}}"
+                  AutomationProperties.Name="Time Entries List"
+                  EnableRowVirtualization="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime, StringFormat='HH:mm:ss'}" Width="80" IsReadOnly="True"/>
                 <DataGridTextColumn Header="End Time" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="80" IsReadOnly="True"/>
@@ -48,8 +50,10 @@
         </DataGrid>
         
         <!-- Weekly Summary Button -->
-        <Button Grid.Row="2" Content="Generate Weekly Summary" 
+        <Button Grid.Row="2" Content="_Generate Weekly Summary" 
                 HorizontalAlignment="Right" Margin="10,10,10,15" 
-                Padding="10,5" Click="WeeklySummary_Click"/>
+                Padding="10,5" Click="WeeklySummary_Click"
+                AutomationProperties.Name="Generate Weekly Summary Button"
+                AutomationProperties.HelpText="Generate an AI summary of your week's activities"/>
     </Grid>
 </UserControl> 

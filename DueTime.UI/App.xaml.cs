@@ -49,6 +49,9 @@ namespace DueTime.UI
             AppState.Entries.Clear();
             foreach(var entry in entryList)
                 AppState.Entries.Add(entry);
+                
+            // Detect first run
+            AppState.IsFirstRun = (AppState.Projects.Count == 0 && AppState.Entries.Count == 0);
         }
     }
 }

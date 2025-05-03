@@ -17,12 +17,18 @@
             <TextBlock Text="Projects" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
             
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBox x:Name="ProjectNameTextBox" Width="200" Margin="0,0,10,0" />
-                <Button Content="Add Project" Click="AddProject_Click" />
+                <TextBox x:Name="ProjectNameTextBox" Width="200" Margin="0,0,10,0" 
+                         AutomationProperties.Name="Project Name" 
+                         AutomationProperties.HelpText="Enter a name for the new project"
+                         KeyDown="ProjectNameTextBox_KeyDown"/>
+                <Button Content="_Add Project" Click="AddProject_Click" 
+                        AutomationProperties.Name="Add Project Button"
+                        ToolTip="Create a new project with the specified name" />
             </StackPanel>
             
             <ListView x:Name="ProjectsListView" Height="300" 
-                      ItemsSource="{Binding Source={x:Static local:AppState.Projects}}">
+                      ItemsSource="{Binding Source={x:Static local:AppState.Projects}}"
+                      AutomationProperties.Name="Projects List">
                 <ListView.View>
                     <GridView>
                         <GridViewColumn Header="ID" DisplayMemberBinding="{Binding ProjectId}" Width="50"/>
@@ -38,12 +44,19 @@
             
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                 <TextBox x:Name="RulePatternTextBox" Width="200" Margin="0,0,10,0" 
-                         ToolTip="Enter a keyword to match in window titles or application names"/>
+                         ToolTip="Enter a keyword to match in window titles or application names"
+                         AutomationProperties.Name="Rule Pattern"
+                         AutomationProperties.HelpText="Enter a keyword to match in window titles or application names"
+                         KeyDown="RulePatternTextBox_KeyDown"/>
                 <ComboBox x:Name="ProjectsComboBox" Width="150" Margin="0,0,10,0"
                           ItemsSource="{Binding Source={x:Static local:AppState.Projects}}"
                           DisplayMemberPath="Name"
-                          SelectedValuePath="ProjectId"/>
-                <Button Content="Add Rule" Click="AddRule_Click" />
+                          SelectedValuePath="ProjectId"
+                          AutomationProperties.Name="Project Selection"
+                          ToolTip="Select a project to assign when the pattern matches"/>
+                <Button Content="Add _Rule" Click="AddRule_Click" 
+                        AutomationProperties.Name="Add Rule Button"
+                        ToolTip="Create a new rule that assigns the selected project when a window title or application matches the pattern" />
             </StackPanel>
             
             <ListView x:Name="RulesListView" Height="300"

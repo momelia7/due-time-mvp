@@ -14,6 +14,20 @@ namespace DueTime.UI.Views
         
         private void AddProject_Click(object sender, RoutedEventArgs e)
         {
+            AddProject();
+        }
+        
+        private void ProjectNameTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                AddProject();
+                e.Handled = true;
+            }
+        }
+        
+        private void AddProject()
+        {
             string name = ProjectNameTextBox.Text.Trim();
             if (!string.IsNullOrEmpty(name))
             {
@@ -43,6 +57,20 @@ namespace DueTime.UI.Views
         }
         
         private void AddRule_Click(object sender, RoutedEventArgs e)
+        {
+            AddRule();
+        }
+        
+        private void RulePatternTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                AddRule();
+                e.Handled = true;
+            }
+        }
+        
+        private void AddRule()
         {
             string pattern = RulePatternTextBox.Text.Trim();
             Project? selectedProject = ProjectsComboBox.SelectedItem as Project;
