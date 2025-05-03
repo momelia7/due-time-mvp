@@ -8,7 +8,7 @@ namespace DueTime.UI
     /// <summary>Global application state and data collections for binding.</summary>
     public static class AppState
     {
-        public static ObservableCollection<TimeEntry> Entries { get; } = new ObservableCollection<TimeEntry>();
+        public static ObservableCollection<DueTime.Data.TimeEntry> Entries { get; } = new ObservableCollection<DueTime.Data.TimeEntry>();
         public static ObservableCollection<Project> Projects { get; } = new ObservableCollection<Project>();
         public static ObservableCollection<Rule> Rules { get; } = new ObservableCollection<Rule>();
         public static SQLiteProjectRepository ProjectRepo { get; } = new SQLiteProjectRepository();

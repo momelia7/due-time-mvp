@@ -6,8 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DueTime.Data\DueTime.Data.csproj" />
-  </ItemGroup>
-
 </Project>

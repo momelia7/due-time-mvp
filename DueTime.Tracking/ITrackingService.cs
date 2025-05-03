@@ -1,5 +1,4 @@
 using System;
-using DueTime.Data;
 
 namespace DueTime.Tracking
 {
