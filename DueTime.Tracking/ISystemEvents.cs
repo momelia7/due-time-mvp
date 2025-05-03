@@ -27,4 +27,18 @@ namespace DueTime.Tracking
         public bool IsIdle { get; }
         public IdleStateChangedEventArgs(bool isIdle) => IsIdle = isIdle;
     }
+
+    /// <summary>Interface for the background tracking service.</summary>
+    public interface ITrackingService
+    {
+        event EventHandler<TimeEntryRecordedEventArgs> TimeEntryRecorded;
+        void Start();
+        void Stop();
+    }
+
+    public class TimeEntryRecordedEventArgs : EventArgs
+    {
+        public Data.TimeEntry Entry { get; }
+        public TimeEntryRecordedEventArgs(Data.TimeEntry entry) => Entry = entry;
+    }
 } 
