@@ -16,6 +16,10 @@ namespace DueTime.UI.Views
             {
                 ApiKeyPasswordBox.Password = SecureStorage.LoadApiKey() ?? string.Empty;
             }
+            
+            // Register for AI checkbox changes
+            EnableAICheckBox.Checked += EnableAICheckBox_Changed;
+            EnableAICheckBox.Unchecked += EnableAICheckBox_Changed;
         }
 
         private void BackupButton_Click(object sender, RoutedEventArgs e)
@@ -169,6 +173,12 @@ namespace DueTime.UI.Views
                     AppState.Projects.Clear();
                     AppState.Rules.Clear();
                     
+                    // Clear API key as well
+                    SecureStorage.DeleteApiKey();
+                    AppState.ApiKeyPlaintext = null;
+                    AppState.AIEnabled = false;
+                    ApiKeyPasswordBox.Password = string.Empty;
+                    
                     System.Windows.MessageBox.Show("All data has been successfully deleted.", "Data Cleared");
                     
                     // Restart tracking
@@ -181,6 +191,34 @@ namespace DueTime.UI.Views
                 {
                     System.Windows.MessageBox.Show($"Error clearing data: {ex.Message}", "Error");
                 }
+            }
+        }
+
+        private void EnableAICheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (EnableAICheckBox.IsChecked == true)
+            {
+                // If API key exists but not loaded, load it now
+                if (SecureStorage.HasApiKey() && string.IsNullOrEmpty(AppState.ApiKeyPlaintext))
+                {
+                    AppState.ApiKeyPlaintext = SecureStorage.LoadApiKey();
+                }
+                
+                // Show a message if no API key is available
+                if (string.IsNullOrEmpty(ApiKeyPasswordBox.Password))
+                {
+                    System.Windows.MessageBox.Show(
+                        "Please enter an OpenAI API key to use AI features.", 
+                        "API Key Required", 
+                        MessageBoxButton.OK, 
+                        MessageBoxImage.Information);
+                }
+            }
+            else
+            {
+                // Keep the key stored, but clear it from memory if AI is disabled
+                // This allows re-enabling without re-entering the key
+                AppState.ApiKeyPlaintext = null;
             }
         }
     }

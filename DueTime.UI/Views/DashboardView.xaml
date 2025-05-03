@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
         <!-- Header -->
@@ -45,5 +46,10 @@
                 </DataGridComboBoxColumn>
             </DataGrid.Columns>
         </DataGrid>
+        
+        <!-- Weekly Summary Button -->
+        <Button Grid.Row="2" Content="Generate Weekly Summary" 
+                HorizontalAlignment="Right" Margin="10,10,10,15" 
+                Padding="10,5" Click="WeeklySummary_Click"/>
     </Grid>
 </UserControl> 
