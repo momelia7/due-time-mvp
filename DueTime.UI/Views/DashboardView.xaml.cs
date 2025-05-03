@@ -17,7 +17,7 @@ namespace DueTime.UI.Views
             EntriesDataGrid.CellEditEnding += EntriesDataGrid_CellEditEnding;
         }
         
-        private void EntriesDataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        private void EntriesDataGrid_CellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
         {
             if (e.EditAction == DataGridEditAction.Commit && e.Column == ProjectColumn)
             {

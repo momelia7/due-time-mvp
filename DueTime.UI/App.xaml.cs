@@ -1,5 +1,6 @@
 using System;
 using DueTime.Data;
+using Microsoft.Win32;
 
 namespace DueTime.UI
 {
@@ -14,6 +15,22 @@ namespace DueTime.UI
             
             // Initialize database and load data
             Database.InitializeSchema();
+            
+            // Check for saved API key and set AI enabled flag accordingly
+            AppState.ApiKeyPlaintext = SecureStorage.LoadApiKey();
+            AppState.AIEnabled = (AppState.ApiKeyPlaintext != null);
+            
+            // Check if app is set to run on startup
+            try
+            {
+                var runKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", false);
+                AppState.RunOnStartup = runKey?.GetValue("DueTime") != null;
+            }
+            catch
+            {
+                // If we can't access registry, default to false
+                AppState.RunOnStartup = false;
+            }
             
             // Load projects
             var projList = AppState.ProjectRepo.GetAllProjectsAsync().Result;

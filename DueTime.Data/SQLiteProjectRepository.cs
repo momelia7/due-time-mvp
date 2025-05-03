@@ -39,5 +39,13 @@ namespace DueTime.Data
             }
             return projects;
         }
+
+        public async Task DeleteAllProjectsAsync()
+        {
+            using var conn = Database.GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM Projects;";
+            await cmd.ExecuteNonQueryAsync();
+        }
     }
 } 

@@ -33,6 +33,7 @@ namespace DueTime.Data
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
             PRAGMA foreign_keys = ON;
+            PRAGMA journal_mode=WAL;
             CREATE TABLE IF NOT EXISTS Projects (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Name TEXT NOT NULL UNIQUE
@@ -77,7 +78,7 @@ namespace DueTime.Data
             aes.KeySize = 256;
             // Use a fixed salt for PBKDF2 (for simplicity, could also store salt)
             byte[] salt = Encoding.UTF8.GetBytes("DueTimeSalt");
-            using var keyDerivation = new Rfc2898DeriveBytes(password, salt, 10000);
+            using var keyDerivation = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA256);
             aes.Key = keyDerivation.GetBytes(32);
             aes.GenerateIV();
             byte[] iv = aes.IV;
@@ -95,12 +96,13 @@ namespace DueTime.Data
             using var aes = Aes.Create();
             aes.KeySize = 256;
             byte[] salt = Encoding.UTF8.GetBytes("DueTimeSalt");
-            using var keyDerivation = new Rfc2898DeriveBytes(password, salt, 10000);
+            using var keyDerivation = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA256);
             aes.Key = keyDerivation.GetBytes(32);
             using FileStream inStream = File.OpenRead(inputPath);
             // Read IV from input file
             byte[] iv = new byte[16];
-            inStream.Read(iv, 0, iv.Length);
+            if (inStream.Read(iv, 0, iv.Length) != iv.Length)
+                throw new InvalidOperationException("Could not read initialization vector from encrypted file");
             aes.IV = iv;
             using FileStream outStream = File.Create(outputPath);
             using var cryptoStream = new CryptoStream(inStream, aes.CreateDecryptor(), CryptoStreamMode.Read);

@@ -13,8 +13,45 @@
             <!-- General Settings -->
             <GroupBox Header="General Settings" Padding="10" Margin="0,0,0,20">
                 <StackPanel>
-                    <CheckBox Content="Run on Startup" IsChecked="{Binding Source={x:Static local:AppState.RunOnStartup}}" Margin="0,5"/>
-                    <CheckBox Content="Enable Dark Mode" IsChecked="{Binding Source={x:Static local:AppState.EnableDarkMode}}" Margin="0,5"/>
+                    <CheckBox x:Name="StartupCheckBox" Content="Run on startup" 
+                              IsChecked="{Binding Source={x:Static local:AppState.RunOnStartup}}" 
+                              Checked="StartupCheckBox_Changed" Unchecked="StartupCheckBox_Changed" 
+                              Margin="0,5"/>
+                    <CheckBox Content="Enable dark mode" 
+                              IsChecked="{Binding Source={x:Static local:AppState.EnableDarkMode}}" 
+                              Margin="0,5"/>
+                </StackPanel>
+            </GroupBox>
+            
+            <!-- AI Features -->
+            <GroupBox Header="AI Features" Padding="10" Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="Enable AI-powered features for smarter time tracking and automatic project categorization. Your data remains private and is only shared with OpenAI when you enable this feature." 
+                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    
+                    <CheckBox x:Name="EnableAICheckBox" Content="Enable AI features (requires OpenAI API key)" 
+                              IsChecked="{Binding Source={x:Static local:AppState.AIEnabled}}" 
+                              Margin="0,5,0,10"/>
+                    
+                    <Grid IsEnabled="{Binding IsChecked, ElementName=EnableAICheckBox}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="OpenAI API Key:" Grid.Column="0" Grid.Row="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <PasswordBox x:Name="ApiKeyPasswordBox" Grid.Column="1" Grid.Row="0" PasswordChar="•" Margin="0,0,10,0"/>
+                        <Button Content="Save Key" Click="SaveApiKey_Click" Grid.Column="2" Grid.Row="0"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" 
+                                   Text="Your API key is stored securely and is only used for authorized API calls." 
+                                   FontStyle="Italic" FontSize="11" Margin="0,5,0,0"/>
+                    </Grid>
                 </StackPanel>
             </GroupBox>
             
@@ -28,6 +65,13 @@
                         <Button Content="Backup Data" Click="BackupButton_Click"/>
                         <Button Content="Restore Data" Click="RestoreButton_Click" Margin="10,0,0,0"/>
                     </StackPanel>
+                    
+                    <TextBlock Text="Clear all data (all tracked time entries, projects and rules will be permanently deleted)" 
+                               TextWrapping="Wrap" Margin="0,20,0,5" Foreground="#CC0000"/>
+                    <Button Content="Clear All Data" Click="ClearData_Click" 
+                            Background="#FFE0E0" Foreground="#CC0000" 
+                            BorderBrush="#CC0000" FontWeight="Bold" 
+                            HorizontalAlignment="Left" Padding="10,5"/>
                 </StackPanel>
             </GroupBox>
         </StackPanel>

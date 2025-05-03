@@ -45,7 +45,7 @@ namespace DueTime.UI.Views
         private void AddRule_Click(object sender, RoutedEventArgs e)
         {
             string pattern = RulePatternTextBox.Text.Trim();
-            Project selectedProject = ProjectsComboBox.SelectedItem as Project;
+            Project? selectedProject = ProjectsComboBox.SelectedItem as Project;
             
             if (string.IsNullOrEmpty(pattern))
             {

@@ -2,51 +2,42 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Runtime.Versioning;
 
 namespace DueTime.Data
 {
+    [SupportedOSPlatform("windows")]
     public static class SecureStorage
     {
-        private static readonly string KeyFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "DueTime", "openai.key.enc");
+        private static string KeyFilePath 
+            => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DueTime", "openai.key.enc");
 
         public static void SaveApiKey(string apiKey)
         {
+            byte[] plaintext = Encoding.UTF8.GetBytes(apiKey);
+            byte[] encrypted = ProtectedData.Protect(plaintext, null, DataProtectionScope.CurrentUser);
+            
             // Ensure directory exists
-            Directory.CreateDirectory(Path.GetDirectoryName(KeyFilePath) ?? string.Empty);
-
-            // Encrypt using Windows Data Protection API
-            byte[] encryptedData = ProtectedData.Protect(
-                Encoding.UTF8.GetBytes(apiKey),
-                null,  // entropy
-                DataProtectionScope.CurrentUser);
-
-            // Save to file
-            File.WriteAllBytes(KeyFilePath, encryptedData);
+            string directory = Path.GetDirectoryName(KeyFilePath) ?? throw new InvalidOperationException("Unable to determine directory for key file");
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+                
+            File.WriteAllBytes(KeyFilePath, encrypted);
         }
 
         public static string? LoadApiKey()
         {
-            if (!File.Exists(KeyFilePath))
-                return null;
-
+            if (!File.Exists(KeyFilePath)) return null;
+            
             try
             {
-                // Read encrypted data
-                byte[] encryptedData = File.ReadAllBytes(KeyFilePath);
-
-                // Decrypt using Windows Data Protection API
-                byte[] decryptedData = ProtectedData.Unprotect(
-                    encryptedData,
-                    null,  // entropy
-                    DataProtectionScope.CurrentUser);
-
-                return Encoding.UTF8.GetString(decryptedData);
+                byte[] encrypted = File.ReadAllBytes(KeyFilePath);
+                byte[] plaintext = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(plaintext);
             }
             catch
             {
-                // If any error occurs, return null
+                // If decryption fails or file is corrupted, return null
                 return null;
             }
         }
@@ -55,9 +46,13 @@ namespace DueTime.Data
         {
             if (File.Exists(KeyFilePath))
             {
-                try { File.Delete(KeyFilePath); }
-                catch { /* Ignore errors on delete */ }
+                try { File.Delete(KeyFilePath); } catch { }
             }
+        }
+
+        public static bool HasApiKey()
+        {
+            return File.Exists(KeyFilePath);
         }
     }
 } 

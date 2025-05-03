@@ -8,5 +8,6 @@ namespace DueTime.Data
     {
         Task<int> AddProjectAsync(string name);
         Task<List<Project>> GetAllProjectsAsync();
+        Task DeleteAllProjectsAsync();
     }
 } 

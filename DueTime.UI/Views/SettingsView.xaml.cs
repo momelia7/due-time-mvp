@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using DueTime.Data;
+using Microsoft.Win32;
 
 namespace DueTime.UI.Views
 {
@@ -9,6 +10,12 @@ namespace DueTime.UI.Views
         public SettingsView()
         {
             InitializeComponent();
+            
+            // Initialize password box if API key exists
+            if (SecureStorage.HasApiKey())
+            {
+                ApiKeyPasswordBox.Password = SecureStorage.LoadApiKey() ?? string.Empty;
+            }
         }
 
         private void BackupButton_Click(object sender, RoutedEventArgs e)
@@ -77,6 +84,102 @@ namespace DueTime.UI.Views
                             AppState.TrackingService.Start();
                         }
                     }
+                }
+            }
+        }
+
+        private void SaveApiKey_Click(object sender, RoutedEventArgs e)
+        {
+            string apiKey = ApiKeyPasswordBox.Password;
+            
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                // Clear the API key if empty
+                SecureStorage.DeleteApiKey();
+                AppState.ApiKeyPlaintext = null;
+                AppState.AIEnabled = false;
+                System.Windows.MessageBox.Show("API key has been removed.", "API Key Removed");
+            }
+            else
+            {
+                // Save the API key securely
+                SecureStorage.SaveApiKey(apiKey);
+                AppState.ApiKeyPlaintext = apiKey;
+                System.Windows.MessageBox.Show("API key has been saved securely.", "API Key Saved");
+            }
+        }
+
+        private void StartupCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+                
+                if (key == null)
+                {
+                    System.Windows.MessageBox.Show("Unable to access registry. Run-on-startup setting could not be changed.", "Registry Error");
+                    return;
+                }
+
+                if (AppState.RunOnStartup)
+                {
+                    // Add app to startup
+                    string appPath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
+                    key.SetValue("DueTime", appPath);
+                }
+                else
+                {
+                    // Remove from startup
+                    key.DeleteValue("DueTime", false);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Error changing startup setting: {ex.Message}", "Error");
+                // Revert the checkbox state since operation failed
+                AppState.RunOnStartup = !AppState.RunOnStartup;
+            }
+        }
+
+        private void ClearData_Click(object sender, RoutedEventArgs e)
+        {
+            var result = System.Windows.MessageBox.Show(
+                "This will delete ALL your time entries, projects, and rules. This action cannot be undone.\n\nAre you sure you want to continue?",
+                "Confirm Data Deletion",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+                
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    // Stop tracking if active
+                    if (AppState.TrackingService != null)
+                    {
+                        AppState.TrackingService.Stop();
+                    }
+                    
+                    // Clear all data from repositories
+                    AppState.EntryRepo.DeleteAllEntriesAsync().Wait();
+                    AppState.ProjectRepo.DeleteAllProjectsAsync().Wait();
+                    AppState.RuleRepo.DeleteAllRulesAsync().Wait();
+                    
+                    // Clear observable collections
+                    AppState.Entries.Clear();
+                    AppState.Projects.Clear();
+                    AppState.Rules.Clear();
+                    
+                    System.Windows.MessageBox.Show("All data has been successfully deleted.", "Data Cleared");
+                    
+                    // Restart tracking
+                    if (AppState.TrackingService != null)
+                    {
+                        AppState.TrackingService.Start();
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Error clearing data: {ex.Message}", "Error");
                 }
             }
         }

@@ -36,5 +36,13 @@ namespace DueTime.Data
             }
             return rules;
         }
+
+        public async Task DeleteAllRulesAsync()
+        {
+            using var conn = Database.GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM Rules;";
+            await cmd.ExecuteNonQueryAsync();
+        }
     }
 } 

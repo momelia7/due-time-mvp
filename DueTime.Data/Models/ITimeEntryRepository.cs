@@ -11,5 +11,6 @@ namespace DueTime.Data
         Task<List<TimeEntry>> GetEntriesByDateAsync(DateTime date);
         Task<List<TimeEntry>> GetEntriesInRangeAsync(DateTime start, DateTime end);
         Task UpdateEntryProjectAsync(int entryId, int? projectId);
+        Task DeleteAllEntriesAsync();
     }
 } 

@@ -130,5 +130,13 @@ namespace DueTime.Data
             cmd.Parameters.AddWithValue("@id", entryId);
             await cmd.ExecuteNonQueryAsync();
         }
+        
+        public async Task DeleteAllEntriesAsync()
+        {
+            using var conn = Database.GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM TimeEntries;";
+            await cmd.ExecuteNonQueryAsync();
+        }
     }
 } 

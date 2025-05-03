@@ -8,5 +8,6 @@ namespace DueTime.Data
     {
         Task<int> AddRuleAsync(string pattern, int projectId);
         Task<List<Rule>> GetAllRulesAsync();
+        Task DeleteAllRulesAsync();
     }
 } 
