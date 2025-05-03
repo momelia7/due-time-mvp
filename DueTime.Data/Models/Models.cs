@@ -11,6 +11,9 @@ namespace DueTime.Data
         public string ApplicationName { get; set; } = string.Empty;
         public int? ProjectId { get; set; }
         public string? ProjectName { get; set; }
+        
+        // Computed property for duration
+        public string Duration => (EndTime - StartTime).ToString(@"hh\:mm\:ss");
     }
 
     public class Project

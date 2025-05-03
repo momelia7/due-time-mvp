@@ -4,10 +4,20 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DueTime.UI"
+        xmlns:views="clr-namespace:DueTime.UI.Views"
         mc:Ignorable="d"
-        Title="DueTime" Height="450" Width="800">
+        Title="DueTime - Time Tracking" Height="600" Width="900">
     <Grid>
-        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" 
-                   FontSize="24">DueTime Tracking Application</TextBlock>
+        <TabControl>
+            <TabItem Header="Dashboard">
+                <views:DashboardView />
+            </TabItem>
+            <TabItem Header="Projects">
+                <views:ProjectsView />
+            </TabItem>
+            <TabItem Header="Settings">
+                <views:SettingsView />
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>

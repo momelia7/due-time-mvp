@@ -8,44 +8,35 @@ namespace DueTime.Data
     {
         public async Task<int> AddProjectAsync(string name)
         {
-            using var connection = Database.GetConnection();
-            using var command = connection.CreateCommand();
-
-            command.CommandText = @"
-                INSERT INTO Projects (Name)
-                VALUES (@name);
-                SELECT last_insert_rowid();";
-            
-            command.Parameters.AddWithValue("@name", name);
-            
-            var result = await command.ExecuteScalarAsync();
-            if (result != null && int.TryParse(result.ToString(), out int id))
+            using var conn = Database.GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "INSERT OR IGNORE INTO Projects (Name) VALUES (@name); SELECT Id FROM Projects WHERE Name=@name;";
+            cmd.Parameters.AddWithValue("@name", name);
+            // We use a SELECT to get the Id whether inserted now or already existed.
+            var result = await cmd.ExecuteScalarAsync();
+            if(result != null)
             {
-                return id;
+                return System.Convert.ToInt32(result);
             }
-            
+            // If result null, something wrong (should not happen unless maybe concurrency).
             return -1;
         }
 
         public async Task<List<Project>> GetAllProjectsAsync()
         {
+            using var conn = Database.GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT Id, Name FROM Projects;";
+            var reader = await cmd.ExecuteReaderAsync();
             var projects = new List<Project>();
-            
-            using var connection = Database.GetConnection();
-            using var command = connection.CreateCommand();
-
-            command.CommandText = "SELECT ProjectId, Name FROM Projects ORDER BY Name";
-            
-            using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
-                projects.Add(new Project
-                {
-                    ProjectId = reader.GetInt32(0),
-                    Name = reader.GetString(1)
+                projects.Add(new Project 
+                { 
+                    ProjectId = reader.GetInt32(0), 
+                    Name = reader.GetString(1) 
                 });
             }
-
             return projects;
         }
     }

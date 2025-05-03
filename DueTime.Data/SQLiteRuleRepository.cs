@@ -8,40 +8,22 @@ namespace DueTime.Data
     {
         public async Task<int> AddRuleAsync(string pattern, int projectId)
         {
-            using var connection = Database.GetConnection();
-            using var command = connection.CreateCommand();
-
-            command.CommandText = @"
-                INSERT INTO Rules (Pattern, ProjectId)
-                VALUES (@pattern, @projectId);
-                SELECT last_insert_rowid();";
-            
-            command.Parameters.AddWithValue("@pattern", pattern);
-            command.Parameters.AddWithValue("@projectId", projectId);
-            
-            var result = await command.ExecuteScalarAsync();
-            if (result != null && int.TryParse(result.ToString(), out int id))
-            {
-                return id;
-            }
-            
-            return -1;
+            using var conn = Database.GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "INSERT INTO Rules (Pattern, ProjectId) VALUES (@pat, @pid); SELECT last_insert_rowid();";
+            cmd.Parameters.AddWithValue("@pat", pattern);
+            cmd.Parameters.AddWithValue("@pid", projectId);
+            var result = await cmd.ExecuteScalarAsync();
+            return result != null ? System.Convert.ToInt32(result) : -1;
         }
 
         public async Task<List<Rule>> GetAllRulesAsync()
         {
+            using var conn = Database.GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT R.Id, R.Pattern, R.ProjectId, P.Name FROM Rules R JOIN Projects P ON R.ProjectId = P.Id;";
+            var reader = await cmd.ExecuteReaderAsync();
             var rules = new List<Rule>();
-            
-            using var connection = Database.GetConnection();
-            using var command = connection.CreateCommand();
-
-            command.CommandText = @"
-                SELECT r.Id, r.Pattern, r.ProjectId, p.Name
-                FROM Rules r
-                JOIN Projects p ON r.ProjectId = p.ProjectId
-                ORDER BY p.Name";
-            
-            using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 rules.Add(new Rule
@@ -52,7 +34,6 @@ namespace DueTime.Data
                     ProjectName = reader.GetString(3)
                 });
             }
-
             return rules;
         }
     }
