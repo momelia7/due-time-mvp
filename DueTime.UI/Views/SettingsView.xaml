@@ -42,6 +42,15 @@
                     <CheckBox x:Name="DarkModeCheckBox" Content="Enable _dark mode" 
                               Margin="0,5"
                               AutomationProperties.HelpText="Changes the application theme to dark colors"/>
+                    
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <TextBlock Text="Active Explorer folder:" VerticalAlignment="Center"/>
+                        <Button Content="_Assign Folder"
+                                Command="{Binding AssignFolderCommand}"
+                                Margin="10,0,0,0"
+                                AutomationProperties.Name="Assign Folder Button"
+                                AutomationProperties.HelpText="Capture the currently active File Explorer folder path"/>
+                    </StackPanel>
                 </StackPanel>
             </GroupBox>
             

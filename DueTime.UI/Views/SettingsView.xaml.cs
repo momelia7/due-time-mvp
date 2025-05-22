@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using DueTime.Data;
+using DueTime.UI.ViewModels;
+using DueTime.Tracking.Services;
 using Microsoft.Win32;
 
 namespace DueTime.UI.Views
@@ -11,6 +13,7 @@ namespace DueTime.UI.Views
         public SettingsView()
         {
             InitializeComponent();
+            DataContext = new DueTime.UI.ViewModels.SettingsViewModel(new DueTime.Tracking.Services.ExplorerService());
             
             // Initialize password box if API key exists
             if (SecureStorage.HasApiKey())
