@@ -17,6 +17,8 @@ namespace DueTime.UI
         // Settings and state flags
         public static bool RunOnStartup { get; set; } = false;
         public static bool EnableDarkMode { get; set; } = false;
+        // Tracking state
+        public static bool IsTrackingPaused { get; set; } = false;
         // AI features (disabled by default for privacy)
         public static bool AIEnabled { get; set; } = false;
         public static string? ApiKeyPlaintext { get; set; } = null;

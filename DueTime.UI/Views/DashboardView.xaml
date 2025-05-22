@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:DueTime.UI"
+             xmlns:vm="clr-namespace:DueTime.UI.ViewModels"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
@@ -15,44 +16,62 @@
         
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="10">
-            <TextBlock Text="Today's Tracked Time" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
-            <TextBlock Text="{Binding Date, StringFormat='d MMMM yyyy'}" FontStyle="Italic" Margin="0,0,0,10"/>
+            <TextBlock Text="Today's Tracked Time" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"
+                     AutomationProperties.HeadingLevel="Level1" 
+                     AutomationProperties.Name="Today's Tracked Time Heading"/>
+            <TextBlock Text="{Binding Date, StringFormat='d MMMM yyyy', FallbackValue='Today'}" 
+                     FontStyle="Italic" Margin="0,0,0,10"
+                     AutomationProperties.Name="Current Date"/>
         </StackPanel>
         
-        <!-- Time Entries Grid -->
-        <DataGrid x:Name="EntriesDataGrid" Grid.Row="1" Margin="10" 
+        <!-- Time Entries Grid with better accessibility -->
+        <Label Grid.Row="1" Target="{Binding ElementName=EntriesDataGrid}" 
+               Content="Time Entries:" Margin="10,0,0,0" Padding="0"
+               AutomationProperties.Name="Time Entries Label"/>
+        <DataGrid x:Name="EntriesDataGrid" Grid.Row="1" Margin="10,25,10,10" 
                   AutoGenerateColumns="False" IsReadOnly="False"
-                  ItemsSource="{Binding Source={x:Static local:AppState.Entries}}"
+                  ItemsSource="{Binding TimeEntries}"
+                  SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+                  TabIndex="1"
                   AutomationProperties.Name="Time Entries List"
+                  AutomationProperties.HelpText="List of your tracked time entries for today"
                   EnableRowVirtualization="True">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime, StringFormat='HH:mm:ss'}" Width="80" IsReadOnly="True"/>
-                <DataGridTextColumn Header="End Time" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="80" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="80" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Window Title" Binding="{Binding WindowTitle}" Width="200" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Application" Binding="{Binding ApplicationName}" Width="120" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime, StringFormat='HH:mm:ss'}" Width="80" IsReadOnly="True"
+                                  AutomationProperties.Name="Start Time Column"/>
+                <DataGridTextColumn Header="End Time" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="80" IsReadOnly="True"
+                                  AutomationProperties.Name="End Time Column"/>
+                <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="80" IsReadOnly="True"
+                                  AutomationProperties.Name="Duration Column"/>
+                <DataGridTextColumn Header="Window Title" Binding="{Binding WindowTitle}" Width="200" IsReadOnly="True"
+                                  AutomationProperties.Name="Window Title Column"/>
+                <DataGridTextColumn Header="Application" Binding="{Binding ApplicationName}" Width="120" IsReadOnly="True"
+                                  AutomationProperties.Name="Application Column"/>
                 <DataGridComboBoxColumn x:Name="ProjectColumn" Header="Project" Width="150"
                                        SelectedValueBinding="{Binding ProjectId, Mode=TwoWay}"
                                        DisplayMemberPath="Name"
-                                       SelectedValuePath="ProjectId">
+                                       SelectedValuePath="ProjectId"
+                                       AutomationProperties.Name="Project Column">
                     <DataGridComboBoxColumn.ElementStyle>
                         <Style TargetType="ComboBox">
-                            <Setter Property="ItemsSource" Value="{Binding Source={x:Static local:AppState.Projects}}"/>
+                            <Setter Property="ItemsSource" Value="{Binding DataContext.Projects, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                         </Style>
                     </DataGridComboBoxColumn.ElementStyle>
                     <DataGridComboBoxColumn.EditingElementStyle>
                         <Style TargetType="ComboBox">
-                            <Setter Property="ItemsSource" Value="{Binding Source={x:Static local:AppState.Projects}}"/>
+                            <Setter Property="ItemsSource" Value="{Binding DataContext.Projects, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                         </Style>
                     </DataGridComboBoxColumn.EditingElementStyle>
                 </DataGridComboBoxColumn>
             </DataGrid.Columns>
         </DataGrid>
         
-        <!-- Weekly Summary Button -->
+        <!-- Weekly Summary Button with improved accessibility -->
         <Button Grid.Row="2" Content="_Generate Weekly Summary" 
                 HorizontalAlignment="Right" Margin="10,10,10,15" 
                 Padding="10,5" Click="WeeklySummary_Click"
+                TabIndex="2"
+                IsDefault="True"
                 AutomationProperties.Name="Generate Weekly Summary Button"
                 AutomationProperties.HelpText="Generate an AI summary of your week's activities"/>
     </Grid>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="DueTime" Version="1.1.0" Manufacturer="DueTime" UpgradeCode="1A2B3C4D-5E6F-7G8H-9I0J-1K2L3M4N5O6P">
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perUser" Description="DueTime Time Tracker"/>
+    <MajorUpgrade DowngradeErrorMessage="A newer version of DueTime is already installed."/>
+    <MediaTemplate EmbedCab="yes"/>
+    
+    <!-- Application directory -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="INSTALLFOLDER" Name="DueTime"/>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="DueTime"/>
+      </Directory>
+      <Directory Id="DesktopFolder" Name="Desktop"/>
+    </Directory>
+    
+    <!-- Features -->
+    <Feature Id="ProductFeature" Title="DueTime" Level="1">
+      <ComponentGroupRef Id="ProductComponents"/>
+      <ComponentRef Id="ApplicationShortcut"/>
+      <ComponentRef Id="DesktopShortcut"/>
+    </Feature>
+    
+    <!-- Components -->
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="DueTime.UI.exe" Guid="*">
+        <File Id="DueTime.UI.exe" Source="$(var.DueTime.UI.TargetDir)DueTime.UI.exe" KeyPath="yes"/>
+      </Component>
+      <Component Id="DueTime.Data.dll" Guid="*">
+        <File Id="DueTime.Data.dll" Source="$(var.DueTime.UI.TargetDir)DueTime.Data.dll" KeyPath="yes"/>
+      </Component>
+      <Component Id="DueTime.Tracking.dll" Guid="*">
+        <File Id="DueTime.Tracking.dll" Source="$(var.DueTime.UI.TargetDir)DueTime.Tracking.dll" KeyPath="yes"/>
+      </Component>
+      <Component Id="Microsoft.Data.Sqlite.dll" Guid="*">
+        <File Id="Microsoft.Data.Sqlite.dll" Source="$(var.DueTime.UI.TargetDir)Microsoft.Data.Sqlite.dll" KeyPath="yes"/>
+      </Component>
+      <Component Id="SQLitePCLRaw.core.dll" Guid="*">
+        <File Id="SQLitePCLRaw.core.dll" Source="$(var.DueTime.UI.TargetDir)SQLitePCLRaw.core.dll" KeyPath="yes"/>
+      </Component>
+      <Component Id="SQLitePCLRaw.provider.e_sqlite3.dll" Guid="*">
+        <File Id="SQLitePCLRaw.provider.e_sqlite3.dll" Source="$(var.DueTime.UI.TargetDir)SQLitePCLRaw.provider.e_sqlite3.dll" KeyPath="yes"/>
+      </Component>
+      <Component Id="e_sqlite3.dll" Guid="*">
+        <File Id="e_sqlite3.dll" Source="$(var.DueTime.UI.TargetDir)runtimes\win-x64\native\e_sqlite3.dll" KeyPath="yes"/>
+      </Component>
+      <Component Id="AutoStartRegistry" Guid="*">
+        <RegistryValue Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="DueTime" Value="[INSTALLFOLDER]DueTime.UI.exe" Type="string" KeyPath="yes"/>
+        <RegistryValue Root="HKCU" Key="Software\DueTime" Name="AutoStart" Value="1" Type="integer"/>
+      </Component>
+    </ComponentGroup>
+    
+    <!-- Start Menu Shortcut -->
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="*">
+        <Shortcut Id="ApplicationStartMenuShortcut" 
+                  Name="DueTime" 
+                  Description="DueTime Time Tracker"
+                  Target="[INSTALLFOLDER]DueTime.UI.exe"
+                  WorkingDirectory="INSTALLFOLDER"/>
+        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU" Key="Software\DueTime" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+    
+    <!-- Desktop Shortcut -->
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="*">
+        <Shortcut Id="ApplicationDesktopShortcut" 
+                  Name="DueTime" 
+                  Description="DueTime Time Tracker"
+                  Target="[INSTALLFOLDER]DueTime.UI.exe"
+                  WorkingDirectory="INSTALLFOLDER"/>
+        <RegistryValue Root="HKCU" Key="Software\DueTime" Name="desktopShortcut" Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+    
+    <!-- UI -->
+    <UIRef Id="WixUI_Minimal"/>
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf"/>
+    
+    <!-- Launch after install -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch DueTime when setup exits"/>
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"/>
+    <CustomAction Id="LaunchApplication" FileKey="DueTime.UI.exe" ExeCommand="" Return="asyncNoWait"/>
+    
+    <UI>
+      <Publish Dialog="ExitDialog" 
+               Control="Finish" 
+               Event="DoAction" 
+               Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+    </UI>
+  </Product>
+</Wix> 

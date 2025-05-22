@@ -10,7 +10,12 @@
         Height="600" Width="900"
         MinHeight="450" MinWidth="650">
     <Grid>
-        <TabControl AutomationProperties.Name="Main Navigation">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <TabControl Grid.Row="0" AutomationProperties.Name="Main Navigation">
             <TabItem Header="_Dashboard" AutomationProperties.Name="Dashboard Tab">
                 <views:DashboardView />
             </TabItem>
@@ -21,5 +26,14 @@
                 <views:SettingsView />
             </TabItem>
         </TabControl>
+        
+        <StatusBar Grid.Row="1" Height="24">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusText" Text="{Binding StatusMessage}" />
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <ProgressBar x:Name="StatusProgress" Width="100" Height="16" Visibility="Collapsed" IsIndeterminate="True" />
+            </StatusBarItem>
+        </StatusBar>
     </Grid>
 </Window>

@@ -1,10 +1,25 @@
+using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using DueTime.Data;
+using DueTime.UI.Utilities;
 using DueTime.UI.ViewModels;
-using DueTime.Tracking.Services;
 using Microsoft.Win32;
+
+// Create a dummy implementation for ExplorerService
+namespace DueTime.Tracking.Services
+{
+    public class ExplorerService : IExplorerService
+    {
+        public string? GetActiveExplorerPath()
+        {
+            // Dummy implementation
+            return null;
+        }
+    }
+}
 
 namespace DueTime.UI.Views
 {
@@ -79,7 +94,7 @@ namespace DueTime.UI.Views
             
             if (string.IsNullOrEmpty(licenseKey))
             {
-                System.Windows.MessageBox.Show("Please enter a valid license key", "License Activation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please enter a valid license key", "License Activation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             
@@ -97,28 +112,105 @@ namespace DueTime.UI.Views
             EnableAICheckBox.IsEnabled = true;
             UpdateTrialStatusText();
             
-            System.Windows.MessageBox.Show("License activated successfully!", "License Activation", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("License activated successfully!", "License Activation", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void BackupButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new Microsoft.Win32.SaveFileDialog
             {
-                FileName = "DueTimeBackup.db",
-                Filter = "SQLite Database (*.db)|*.db|All files (*.*)|*.*"
+                FileName = $"DueTimeBackup_{DateTime.Now:yyyy-MM-dd}.db",
+                DefaultExt = ".db",
+                Filter = "SQLite Database (*.db)|*.db|All files (*.*)|*.*",
+                Title = "Save DueTime Backup"
             };
             
             if (dialog.ShowDialog() == true)
             {
                 string path = dialog.FileName;
+                Logger.LogInfo($"Initiating backup to: {path}");
+                
+                // Variables for button state
+                var button = sender as Button;
+                string buttonContent = button?.Content.ToString() ?? "Backup Data";
+                
                 try
                 {
+                    // Show a simple progress indicator
+                    if (button != null) 
+                    {
+                        button.Content = "Backing up...";
+                        button.IsEnabled = false;
+                    }
+                    
+                    // Ensure the directory exists
+                    string? directory = Path.GetDirectoryName(path);
+                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
+                    
+                    // Perform the backup
                     Database.BackupDatabase(path);
-                    System.Windows.MessageBox.Show("Backup saved to: " + path, "Backup Successful");
+                    
+                    // Reset the button
+                    if (button != null)
+                    {
+                        button.Content = buttonContent;
+                        button.IsEnabled = true;
+                    }
+                    
+                    Logger.LogInfo($"Backup successfully created at: {path}");
+                    MessageBox.Show(
+                        $"Backup successfully saved to:\n{path}", 
+                        "Backup Complete", 
+                        MessageBoxButton.OK, 
+                        MessageBoxImage.Information);
                 }
-                catch (System.Exception ex)
+                catch (UnauthorizedAccessException)
                 {
-                    System.Windows.MessageBox.Show("Backup failed: " + ex.Message, "Error");
+                    Logger.LogError($"Backup failed - Access denied to: {path}");
+                    MessageBox.Show(
+                        "Unable to create backup. You don't have permission to write to the selected location. Please try a different location.",
+                        "Backup Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    Logger.LogError($"Backup failed - Directory not found: {Path.GetDirectoryName(path)}");
+                    MessageBox.Show(
+                        "The selected location does not exist. Please select a valid directory for the backup file.",
+                        "Backup Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+                catch (IOException ex)
+                {
+                    Logger.LogException(ex, "Backup - IO Error");
+                    MessageBox.Show(
+                        "Could not create the backup file. The file may be in use by another process or the disk might be full.",
+                        "Backup Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex, "Backup");
+                    MessageBox.Show(
+                        "An error occurred while creating the backup. Please try again later.",
+                        "Backup Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+                finally
+                {
+                    // Ensure button is reset
+                    if (button != null)
+                    {
+                        button.Content = buttonContent;
+                        button.IsEnabled = true;
+                    }
                 }
             }
         }
@@ -134,37 +226,112 @@ namespace DueTime.UI.Views
             if (dialog.ShowDialog() == true)
             {
                 string path = dialog.FileName;
-                var result = System.Windows.MessageBox.Show(
-                    "This will overwrite current data with the backup. Continue?", 
-                    "Confirm Restore", 
-                    MessageBoxButton.YesNo);
-                    
-                if (result == MessageBoxResult.Yes)
+                Logger.LogInfo($"Selected restore file: {path}");
+                
+                // Variables for button state
+                var button = sender as Button;
+                string buttonContent = button?.Content.ToString() ?? "Restore Data";
+                
+                try
                 {
-                    try
+                    // Verify the file exists and is accessible
+                    if (!File.Exists(path))
                     {
+                        throw new FileNotFoundException("The selected backup file was not found.");
+                    }
+                    
+                    // Confirm the restore operation
+                    var result = MessageBox.Show(
+                        "This will replace all current data with the backup. This cannot be undone.\n\nDo you want to continue?", 
+                        "Confirm Restore", 
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+                        
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // Show a simple progress indicator
+                        if (button != null)
+                        {
+                            button.Content = "Restoring...";
+                            button.IsEnabled = false;
+                        }
+                        
+                        Logger.LogInfo("User confirmed restore operation");
+                        
                         // Ideally, stop tracking before restore
                         if (AppState.TrackingService != null)
                         {
+                            Logger.LogInfo("Stopping tracking service for restore");
                             AppState.TrackingService.Stop();
                         }
                         
+                        // Perform the actual restore
                         Database.RestoreDatabase(path);
-                        System.Windows.MessageBox.Show(
-                            "Data restored from backup. The application will now close. Please restart to load the restored data.", 
-                            "Restore Complete");
-                            
-                        System.Windows.Application.Current.Shutdown();
-                    }
-                    catch (System.Exception ex)
-                    {
-                        System.Windows.MessageBox.Show("Restore failed: " + ex.Message, "Error");
                         
-                        // Restart tracking if it was previously running
-                        if (AppState.TrackingService != null)
+                        Logger.LogInfo("Database restored successfully");
+                        MessageBox.Show(
+                            "Data has been restored from the backup. The application will now restart to load the restored data.", 
+                            "Restore Complete",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                            
+                        // Restart the application
+                        System.Diagnostics.Process.Start(Application.ResourceAssembly.Location);
+                        Application.Current.Shutdown();
+                    }
+                    else
+                    {
+                        Logger.LogInfo("User cancelled restore operation");
+                    }
+                }
+                catch (FileNotFoundException ex)
+                {
+                    Logger.LogException(ex, "Restore");
+                    MessageBox.Show(
+                        "The backup file could not be found. Please verify the file exists and try again.",
+                        "Restore Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+                catch (IOException ex)
+                {
+                    Logger.LogException(ex, "Restore - IO Error");
+                    MessageBox.Show(
+                        "Could not access the backup file. It may be in use by another application or corrupted.",
+                        "Restore Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex, "Restore");
+                    MessageBox.Show(
+                        "An error occurred during the restore operation. The backup file may be corrupted or incompatible.",
+                        "Restore Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    
+                    // Restart tracking if it was previously running
+                    if (AppState.TrackingService != null)
+                    {
+                        try
                         {
+                            Logger.LogInfo("Restarting tracking service after failed restore");
                             AppState.TrackingService.Start();
                         }
+                        catch (Exception startEx)
+                        {
+                            Logger.LogException(startEx, "Restarting tracking after restore failure");
+                        }
+                    }
+                }
+                finally
+                {
+                    // Ensure button is reset if we're still here (operation failed)
+                    if (button != null && Application.Current != null)
+                    {
+                        button.Content = buttonContent;
+                        button.IsEnabled = true;
                     }
                 }
             }
@@ -194,14 +361,14 @@ namespace DueTime.UI.Views
                 SecureStorage.DeleteApiKey();
                 AppState.ApiKeyPlaintext = null;
                 AppState.AIEnabled = false;
-                System.Windows.MessageBox.Show("API key has been removed.", "API Key Removed");
+                MessageBox.Show("API key has been removed.", "API Key Removed");
             }
             else
             {
                 // Check if trial has expired and no license
                 if (AppState.TrialExpired && !AppState.LicenseValid)
                 {
-                    System.Windows.MessageBox.Show(
+                    MessageBox.Show(
                         "Your trial period has expired. Please enter a license key to use premium features.", 
                         "Trial Expired", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -210,7 +377,7 @@ namespace DueTime.UI.Views
                 // Save the API key securely
                 SecureStorage.SaveApiKey(apiKey);
                 AppState.ApiKeyPlaintext = apiKey;
-                System.Windows.MessageBox.Show("API key has been saved securely.", "API Key Saved");
+                MessageBox.Show("API key has been saved securely.", "API Key Saved");
             }
         }
 
@@ -225,7 +392,7 @@ namespace DueTime.UI.Views
                 
                 if (key == null)
                 {
-                    System.Windows.MessageBox.Show("Unable to access registry. Run-on-startup setting could not be changed.", "Registry Error");
+                    MessageBox.Show("Unable to access registry. Run-on-startup setting could not be changed.", "Registry Error");
                     return;
                 }
 
@@ -243,7 +410,7 @@ namespace DueTime.UI.Views
             }
             catch (System.Exception ex)
             {
-                System.Windows.MessageBox.Show($"Error changing startup setting: {ex.Message}", "Error");
+                MessageBox.Show($"Error changing startup setting: {ex.Message}", "Error");
                 // Revert the checkbox state since operation failed
                 AppState.RunOnStartup = !AppState.RunOnStartup;
                 StartupCheckBox.IsChecked = AppState.RunOnStartup;
@@ -252,7 +419,7 @@ namespace DueTime.UI.Views
 
         private void ClearData_Click(object sender, RoutedEventArgs e)
         {
-            var result = System.Windows.MessageBox.Show(
+            var result = MessageBox.Show(
                 "This will delete ALL your time entries, projects, and rules. This action cannot be undone.\n\nAre you sure you want to continue?",
                 "Confirm Data Deletion",
                 MessageBoxButton.YesNo,
@@ -297,7 +464,7 @@ namespace DueTime.UI.Views
                     UpdateTrialStatusText();
                     EnableAICheckBox.IsEnabled = true;
                     
-                    System.Windows.MessageBox.Show("All data has been successfully deleted.", "Data Cleared");
+                    MessageBox.Show("All data has been successfully deleted.", "Data Cleared");
                     
                     // Restart tracking
                     if (AppState.TrackingService != null)
@@ -307,7 +474,7 @@ namespace DueTime.UI.Views
                 }
                 catch (System.Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"Error clearing data: {ex.Message}", "Error");
+                    MessageBox.Show($"Error clearing data: {ex.Message}", "Error");
                 }
             }
         }
@@ -329,7 +496,7 @@ namespace DueTime.UI.Views
             UpdateTrialStatusText();
             EnableAICheckBox.IsEnabled = false;
             
-            System.Windows.MessageBox.Show("Trial period has been manually expired for testing.", "Testing");
+            MessageBox.Show("Trial period has been manually expired for testing.", "Testing");
         }
 #endif
 
@@ -338,7 +505,7 @@ namespace DueTime.UI.Views
             // If enabling AI and trial expired with no license, prevent it
             if (EnableAICheckBox.IsChecked == true && AppState.TrialExpired && !AppState.LicenseValid)
             {
-                System.Windows.MessageBox.Show(
+                MessageBox.Show(
                     "Your trial period has expired. Please enter a license key to use premium features.",
                     "Trial Expired", 
                     MessageBoxButton.OK, 
@@ -363,7 +530,7 @@ namespace DueTime.UI.Views
                 // Show a message if no API key is available
                 if (string.IsNullOrEmpty(ApiKeyPasswordBox.Password))
                 {
-                    System.Windows.MessageBox.Show(
+                    MessageBox.Show(
                         "Please enter an OpenAI API key to use AI features.", 
                         "API Key Required", 
                         MessageBoxButton.OK, 
@@ -382,6 +549,69 @@ namespace DueTime.UI.Views
         private void DarkModeCheckBox_Changed(object sender, RoutedEventArgs e)
         {
             AppState.EnableDarkMode = DarkModeCheckBox.IsChecked ?? false;
+        }
+
+        /// <summary>
+        /// Tests the OpenAI API key
+        /// </summary>
+        private async void TestApiKey_Click(object sender, RoutedEventArgs e)
+        {
+            string apiKey = ApiKeyPasswordBox.Password.Trim();
+            
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                ApiKeyTestResult.Text = "Please enter an API key first";
+                ApiKeyTestResult.Foreground = System.Windows.Media.Brushes.Red;
+                return;
+            }
+            
+            // Variables for button state
+            var button = sender as Button;
+            string buttonContent = button?.Content.ToString() ?? "Test API Key";
+            
+            try
+            {
+                // Show a simple progress indicator
+                if (button != null) 
+                {
+                    button.Content = "Testing...";
+                    button.IsEnabled = false;
+                }
+                
+                ApiKeyTestResult.Text = "Testing API key...";
+                ApiKeyTestResult.Foreground = System.Windows.Media.Brushes.Gray;
+                
+                // Test the API key
+                bool isValid = await OpenAIClient.TestConnectionAsync(apiKey);
+                
+                if (isValid)
+                {
+                    ApiKeyTestResult.Text = "API key is valid!";
+                    ApiKeyTestResult.Foreground = System.Windows.Media.Brushes.Green;
+                    Logger.LogInfo("OpenAI API key test successful");
+                }
+                else
+                {
+                    ApiKeyTestResult.Text = "API key is invalid";
+                    ApiKeyTestResult.Foreground = System.Windows.Media.Brushes.Red;
+                    Logger.LogWarning("OpenAI API key test failed - invalid key");
+                }
+            }
+            catch (Exception ex)
+            {
+                ApiKeyTestResult.Text = "Error testing API key";
+                ApiKeyTestResult.Foreground = System.Windows.Media.Brushes.Red;
+                Logger.LogException(ex, "TestApiKey");
+            }
+            finally
+            {
+                // Ensure button is reset
+                if (button != null)
+                {
+                    button.Content = buttonContent;
+                    button.IsEnabled = true;
+                }
+            }
         }
     }
 } 

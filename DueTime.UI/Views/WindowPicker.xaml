@@ -1,0 +1,53 @@
+<Window x:Class="DueTime.UI.Views.WindowPicker"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Select an Open Window" Height="400" Width="600" 
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize"
+        ShowInTaskbar="False" MinWidth="400" MinHeight="300">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                 Text="Select an open window to create a rule:" 
+                 Margin="0,0,0,10" 
+                 TextWrapping="Wrap"
+                 AutomationProperties.HeadingLevel="Level1"
+                 FontWeight="Bold"/>
+        
+        <!-- Windows List -->
+        <ListView Grid.Row="1" 
+                x:Name="WindowList" 
+                Margin="0,0,0,10"
+                AutomationProperties.Name="Open Windows List"
+                SelectionMode="Single">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="Window Title" Width="350" 
+                                   DisplayMemberBinding="{Binding Title}"
+                                   AutomationProperties.Name="Window Title"/>
+                    <GridViewColumn Header="Application" Width="150" 
+                                   DisplayMemberBinding="{Binding AppName}"
+                                   AutomationProperties.Name="Application Name"/>
+                </GridView>
+            </ListView.View>
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="ToolTip" Value="{Binding Title}"/>
+                </Style>
+            </ListView.ItemContainerStyle>
+        </ListView>
+        
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Select" Width="80" Height="25" Margin="0,0,10,0" IsDefault="True"
+                  Click="OK_Click" AutomationProperties.Name="Select Window Button"/>
+            <Button Content="Cancel" Width="80" Height="25" IsCancel="True"
+                  AutomationProperties.Name="Cancel Button" Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window> 

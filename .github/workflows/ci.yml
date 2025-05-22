@@ -4,6 +4,10 @@ name: CI Build and Test
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [created]
 
 jobs:
   build-and-test:
@@ -15,10 +19,15 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: 6.0.x
+          dotnet-version: 8.0.x
 
       - name: Install dotnet-format tool
         run: dotnet tool install -g dotnet-format
+
+      - name: Install WiX Toolset
+        run: |
+          choco install wixtoolset -y
+          echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Restore dependencies
         run: dotnet restore
@@ -36,4 +45,37 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: test-results
-          path: testResults 
+          path: testResults
+          
+      - name: Build installer
+        if: github.event_name == 'release'
+        run: |
+          # Extract version from tag
+          $version = "${{ github.ref }}".Replace('refs/tags/v', '')
+          
+          # Build the installer
+          msbuild DueTimeSetup/DueTimeSetup.wixproj /p:Configuration=Release /p:Platform=x86
+          
+          # Create artifact directory
+          mkdir -p installer-artifact
+          
+          # Copy installer to artifact directory with version in name
+          cp DueTimeSetup/bin/Release/DueTimeSetup.msi installer-artifact/DueTime-$version.msi
+          
+      - name: Upload installer artifact
+        if: github.event_name == 'release'
+        uses: actions/upload-artifact@v3
+        with:
+          name: DueTimeInstaller
+          path: installer-artifact/*.msi
+          
+      - name: Upload installer to release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./installer-artifact/DueTime-${{ github.ref_name }}.msi
+          asset_name: DueTime-${{ github.ref_name }}.msi
+          asset_content_type: application/octet-stream 

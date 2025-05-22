@@ -6,32 +6,30 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using DueTime.Data;
+using DueTime.UI.ViewModels;
 
 namespace DueTime.UI.Views
 {
     public partial class DashboardView : System.Windows.Controls.UserControl
     {
-        public DateTime Date { get; set; } = DateTime.Today;
+        private DashboardViewModel? _viewModel;
         
         public DashboardView()
         {
             InitializeComponent();
-            DataContext = this;
             
-            // Register event handlers
-            EntriesDataGrid.CellEditEnding += EntriesDataGrid_CellEditEnding;
+            // We'll set this in the Loaded event when we know repositories are available
+            Loaded += DashboardView_Loaded;
         }
         
-        private void EntriesDataGrid_CellEditEnding(object? sender, DataGridCellEditEndingEventArgs e)
+        private void DashboardView_Loaded(object sender, RoutedEventArgs e)
         {
-            if (e.EditAction == DataGridEditAction.Commit && e.Column == ProjectColumn)
-            {
-                if (e.Row.Item is TimeEntry entry)
-                {
-                    // Update the database with the new project assignment
-                    AppState.EntryRepo.UpdateEntryProjectAsync(entry.Id, entry.ProjectId).Wait();
-                }
-            }
+            // Initialize the ViewModel with repositories from AppState
+            // Eventually these would be injected through DI
+            _viewModel = new DashboardViewModel(AppState.EntryRepo, AppState.ProjectRepo);
+            DataContext = _viewModel;
+            
+            // No need to register for CellEditEnding - the ViewModel handles this via binding
         }
         
         private async void WeeklySummary_Click(object sender, RoutedEventArgs e)
@@ -44,110 +42,179 @@ namespace DueTime.UI.Views
                     "Trial Expired", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
-            if (!AppState.AIEnabled || string.IsNullOrEmpty(AppState.ApiKeyPlaintext))
-            {
-                System.Windows.MessageBox.Show("AI features are not enabled. Please enable AI and add your OpenAI API key in Settings.", 
-                               "AI Not Enabled", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
             
             try
             {
-                // Show loading indicator
-                var button = (System.Windows.Controls.Button)sender;
-                var originalContent = button.Content;
-                button.Content = "Generating...";
-                button.IsEnabled = false;
+                // Get the main window for status updates
+                var mainWindow = Window.GetWindow(this) as MainWindow;
+                if (mainWindow != null)
+                {
+                    await mainWindow.ShowStatusMessageAsync("Generating weekly summary...", 0);
+                }
                 
-                // Get date range for the past week
+                // Get entries for the past week
                 DateTime today = DateTime.Today;
                 DateTime weekStart = today.AddDays(-6); // Last 7 days including today
                 
-                // Fetch entries for the past week
                 var entries = await AppState.EntryRepo.GetEntriesInRangeAsync(weekStart, today.AddDays(1));
                 
                 if (entries.Count == 0)
                 {
-                    System.Windows.MessageBox.Show("No time entries found for the past week.", 
-                                   "No Data", MessageBoxButton.OK, MessageBoxImage.Information);
-                    button.Content = originalContent;
-                    button.IsEnabled = true;
+                    if (mainWindow != null)
+                    {
+                        await mainWindow.ShowStatusMessageAsync("No time entries found for the past week", 3000);
+                    }
+                    
+                    MessageBox.Show("No time entries found for the past week.", "Weekly Summary", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
                 
-                // Calculate total time per project
-                var projectTotals = new Dictionary<string, TimeSpan>();
-                
-                foreach (var entry in entries)
-                {
-                    string projectName = "Unassigned";
-                    
-                    if (entry.ProjectId.HasValue)
+                // Group entries by project and calculate total time
+                var projectTotals = entries
+                    .Where(e => e.EndTime != DateTime.MinValue) // Filter out entries without end time
+                    .GroupBy(e => GetProjectName(e))
+                    .Select(g => new 
                     {
-                        var project = AppState.Projects.FirstOrDefault(p => p.ProjectId == entry.ProjectId.Value);
-                        if (project != null)
+                        Project = g.Key,
+                        TotalMinutes = g.Sum(e => (int)(e.EndTime - e.StartTime).TotalMinutes)
+                    })
+                    .OrderByDescending(p => p.TotalMinutes)
+                    .ToList();
+                
+                // Create basic summary text
+                StringBuilder summaryText = new StringBuilder();
+                summaryText.AppendLine($"Weekly Summary ({weekStart.ToShortDateString()} - {today.ToShortDateString()})");
+                summaryText.AppendLine();
+                
+                foreach (var proj in projectTotals)
+                {
+                    double hours = proj.TotalMinutes / 60.0;
+                    summaryText.AppendLine($"• {proj.Project}: {hours:F1} hours");
+                }
+                
+                double totalHours = projectTotals.Sum(p => p.TotalMinutes) / 60.0;
+                summaryText.AppendLine();
+                summaryText.AppendLine($"Total Tracked Time: {totalHours:F1} hours");
+                
+                string finalSummary = summaryText.ToString();
+                
+                // If AI is enabled, try to get a narrative summary
+                if (AppState.AIEnabled && !string.IsNullOrEmpty(AppState.ApiKeyPlaintext) &&
+                    (!AppState.TrialExpired || AppState.LicenseValid))
+                {
+                    try
+                    {
+                        if (mainWindow != null)
                         {
-                            projectName = project.Name;
+                            await mainWindow.ShowStatusMessageAsync("Generating AI narrative...", 0);
+                        }
+                        
+                        string aiPrompt = summaryText.ToString() + "\n\nBased on the data above, provide a brief summary of this week's work.";
+                        string? aiSummary = await OpenAIClient.GetWeeklySummaryAsync(weekStart, today, aiPrompt, AppState.ApiKeyPlaintext);
+                        
+                        if (!string.IsNullOrEmpty(aiSummary))
+                        {
+                            // Add the AI summary to the basic summary
+                            finalSummary = summaryText.ToString() + "\n\nAI Summary:\n" + aiSummary;
                         }
                     }
-                    
-                    TimeSpan duration = entry.EndTime - entry.StartTime;
-                    
-                    if (projectTotals.ContainsKey(projectName))
+                    catch (Exception ex)
                     {
-                        projectTotals[projectName] += duration;
-                    }
-                    else
-                    {
-                        projectTotals[projectName] = duration;
+                        // If AI summary fails, we'll just use the basic summary
+                        Utilities.Logger.LogException(ex, "WeeklySummary_AI");
                     }
                 }
                 
-                // Build the prompt for the summary
-                var summaryPrompt = new StringBuilder();
-                summaryPrompt.AppendLine($"Week from {weekStart:MMMM d, yyyy} to {today:MMMM d, yyyy}:");
-                
-                foreach (var project in projectTotals.OrderByDescending(p => p.Value))
+                // Clear status message
+                if (mainWindow != null)
                 {
-                    double hours = Math.Round(project.Value.TotalHours, 1);
-                    summaryPrompt.AppendLine($"{project.Key}: {hours} hours");
+                    await mainWindow.ShowStatusMessageAsync("Weekly summary generated", 3000);
                 }
                 
-                // Call OpenAI to generate summary
-                string? summary = await OpenAIClient.GetWeeklySummaryAsync(
-                    weekStart, today, summaryPrompt.ToString(), AppState.ApiKeyPlaintext);
-                
-                // Reset button state
-                button.Content = originalContent;
-                button.IsEnabled = true;
-                
-                if (summary != null)
-                {
-                    // Display the summary
-                    var fullSummary = $"{summaryPrompt}\n\n{summary}";
-                    var summaryWindow = new SummaryWindow(fullSummary);
-                    summaryWindow.Owner = Window.GetWindow(this);
-                    summaryWindow.ShowDialog();
-                }
-                else
-                {
-                    System.Windows.MessageBox.Show("Failed to generate summary. Please check your API key and internet connection.", 
-                                   "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                // Show the summary in a dialog
+                ShowSummaryDialog(finalSummary);
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"An error occurred: {ex.Message}", 
-                               "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                
-                // Reset button state on error
-                if (sender is System.Windows.Controls.Button button)
-                {
-                    button.Content = "Generate Weekly Summary";
-                    button.IsEnabled = true;
-                }
+                Utilities.Logger.LogException(ex, "WeeklySummary_Click");
+                MessageBox.Show("An error occurred while generating the weekly summary.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+        
+        private string GetProjectName(TimeEntry entry)
+        {
+            if (entry.ProjectId == null)
+                return "(No Project)";
+                
+            var project = AppState.Projects.FirstOrDefault(p => p.ProjectId == entry.ProjectId);
+            return project?.Name ?? "(Unknown Project)";
+        }
+        
+        private void ShowSummaryDialog(string summaryText)
+        {
+            // Create a simple dialog to show the summary
+            var dialog = new Window
+            {
+                Title = "Weekly Summary",
+                Width = 600,
+                Height = 400,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = Window.GetWindow(this)
+            };
+            
+            // Create the content
+            var grid = new Grid();
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            
+            var textBox = new System.Windows.Controls.TextBox
+            {
+                Text = summaryText,
+                IsReadOnly = true,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Margin = new Thickness(10),
+                FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace"),
+                AcceptsReturn = true
+            };
+            Grid.SetRow(textBox, 0);
+            
+            var buttonPanel = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+                Margin = new Thickness(10)
+            };
+            Grid.SetRow(buttonPanel, 1);
+            
+            var copyButton = new Button
+            {
+                Content = "Copy to Clipboard",
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            copyButton.Click += (s, e) => 
+            {
+                System.Windows.Clipboard.SetText(summaryText);
+                MessageBox.Show("Summary copied to clipboard.", "Copy Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            };
+            
+            var closeButton = new Button
+            {
+                Content = "Close",
+                Padding = new Thickness(10, 5, 10, 5),
+                IsDefault = true
+            };
+            closeButton.Click += (s, e) => dialog.Close();
+            
+            buttonPanel.Children.Add(copyButton);
+            buttonPanel.Children.Add(closeButton);
+            
+            grid.Children.Add(textBox);
+            grid.Children.Add(buttonPanel);
+            
+            dialog.Content = grid;
+            dialog.ShowDialog();
         }
     }
 } 

@@ -16,6 +16,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <Company>DueTime</Company>
+    <Product>DueTime Time Tracker</Product>
+    <Description>A time tracking application that automatically tracks your activities.</Description>
+    <Copyright>Copyright © 2023-2025</Copyright>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="System.Windows.MessageBox" Alias="WpfMessageBox" />
+    <Using Include="System.Windows.Application" Alias="WpfApplication" />
+    <Using Include="System.Windows.Controls.Button" Alias="WpfButton" />
+  </ItemGroup>
 
 </Project>

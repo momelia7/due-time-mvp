@@ -10,6 +10,9 @@ namespace DueTime.Data
     public static class Database
     {
         public static string DbPath { get; private set; }
+        
+        // Current schema version
+        private const int CurrentSchemaVersion = 2;
 
         static Database()
         {
@@ -22,7 +25,7 @@ namespace DueTime.Data
 
         public static SqliteConnection GetConnection()
         {
-            var conn = new SqliteConnection($"Data Source={DbPath}");
+            var conn = new SqliteConnection($"Data Source={DbPath};Cache=Shared");
             conn.Open();
             return conn;
         }
@@ -30,6 +33,46 @@ namespace DueTime.Data
         public static void InitializeSchema()
         {
             using var conn = GetConnection();
+            
+            // Check current schema version
+            int currentVersion = GetSchemaVersion(conn);
+            
+            // If this is a new database (version 0), create the schema
+            if (currentVersion == 0)
+            {
+                CreateInitialSchema(conn);
+                SetSchemaVersion(conn, 1);
+                currentVersion = 1;
+            }
+            
+            // Apply any migrations needed
+            if (currentVersion < 2)
+            {
+                ApplyMigrationToV2(conn);
+                SetSchemaVersion(conn, 2);
+            }
+            
+            // Add future migrations here as needed
+            // if (currentVersion < 3) { ApplyMigrationToV3(conn); SetSchemaVersion(conn, 3); }
+        }
+        
+        private static int GetSchemaVersion(SqliteConnection conn)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "PRAGMA user_version;";
+            var result = cmd.ExecuteScalar();
+            return Convert.ToInt32(result);
+        }
+        
+        private static void SetSchemaVersion(SqliteConnection conn, int version)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"PRAGMA user_version = {version};";
+            cmd.ExecuteNonQuery();
+        }
+        
+        private static void CreateInitialSchema(SqliteConnection conn)
+        {
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
             PRAGMA foreign_keys = ON;
@@ -56,8 +99,18 @@ namespace DueTime.Data
             CREATE TABLE IF NOT EXISTS Settings (
                 Key TEXT PRIMARY KEY,
                 Value TEXT
-            );
-            ";
+            );";
+            cmd.ExecuteNonQuery();
+        }
+        
+        private static void ApplyMigrationToV2(SqliteConnection conn)
+        {
+            // Migration for version 2: Add indexes for performance
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+            -- Create indexes to improve query performance
+            CREATE INDEX IF NOT EXISTS IX_TimeEntries_StartTime ON TimeEntries(StartTime);
+            CREATE INDEX IF NOT EXISTS IX_TimeEntries_ProjectId ON TimeEntries(ProjectId);";
             cmd.ExecuteNonQuery();
         }
 
