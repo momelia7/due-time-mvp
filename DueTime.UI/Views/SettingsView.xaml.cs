@@ -18,9 +18,18 @@ namespace DueTime.UI.Views
                 ApiKeyPasswordBox.Password = SecureStorage.LoadApiKey() ?? string.Empty;
             }
             
+            // Initialize CheckBox states from AppState
+            StartupCheckBox.IsChecked = AppState.RunOnStartup;
+            DarkModeCheckBox.IsChecked = AppState.EnableDarkMode;
+            EnableAICheckBox.IsChecked = AppState.AIEnabled;
+            
             // Register for AI checkbox changes
             EnableAICheckBox.Checked += EnableAICheckBox_Changed;
             EnableAICheckBox.Unchecked += EnableAICheckBox_Changed;
+            
+            // Register for dark mode checkbox changes
+            DarkModeCheckBox.Checked += DarkModeCheckBox_Changed;
+            DarkModeCheckBox.Unchecked += DarkModeCheckBox_Changed;
             
             // Set AI checkbox enabled state based on trial and license
             EnableAICheckBox.IsEnabled = !AppState.TrialExpired || AppState.LicenseValid;
@@ -204,6 +213,9 @@ namespace DueTime.UI.Views
 
         private void StartupCheckBox_Changed(object sender, RoutedEventArgs e)
         {
+            // Update AppState to match checkbox state
+            AppState.RunOnStartup = StartupCheckBox.IsChecked ?? false;
+            
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
@@ -231,6 +243,7 @@ namespace DueTime.UI.Views
                 System.Windows.MessageBox.Show($"Error changing startup setting: {ex.Message}", "Error");
                 // Revert the checkbox state since operation failed
                 AppState.RunOnStartup = !AppState.RunOnStartup;
+                StartupCheckBox.IsChecked = AppState.RunOnStartup;
             }
         }
 
@@ -333,6 +346,9 @@ namespace DueTime.UI.Views
                 return;
             }
             
+            // Update AppState to match checkbox
+            AppState.AIEnabled = EnableAICheckBox.IsChecked ?? false;
+            
             if (EnableAICheckBox.IsChecked == true)
             {
                 // If API key exists but not loaded, load it now
@@ -357,6 +373,12 @@ namespace DueTime.UI.Views
                 // This allows re-enabling without re-entering the key
                 AppState.ApiKeyPlaintext = null;
             }
+        }
+
+        // Add handler for dark mode checkbox
+        private void DarkModeCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            AppState.EnableDarkMode = DarkModeCheckBox.IsChecked ?? false;
         }
     }
 } 

@@ -36,12 +36,10 @@
             <GroupBox Header="General Settings" Padding="10" Margin="0,0,0,20" AutomationProperties.Name="General Settings Section">
                 <StackPanel>
                     <CheckBox x:Name="StartupCheckBox" Content="_Run on startup" 
-                              IsChecked="{Binding Source={x:Static local:AppState.RunOnStartup}}" 
                               Checked="StartupCheckBox_Changed" Unchecked="StartupCheckBox_Changed" 
                               Margin="0,5"
                               AutomationProperties.HelpText="When enabled, DueTime will start automatically when you log in to Windows"/>
-                    <CheckBox Content="Enable _dark mode" 
-                              IsChecked="{Binding Source={x:Static local:AppState.EnableDarkMode}}" 
+                    <CheckBox x:Name="DarkModeCheckBox" Content="Enable _dark mode" 
                               Margin="0,5"
                               AutomationProperties.HelpText="Changes the application theme to dark colors"/>
                 </StackPanel>
@@ -54,11 +52,10 @@
                                TextWrapping="Wrap" Margin="0,0,0,10"/>
                     
                     <CheckBox x:Name="EnableAICheckBox" Content="Enable _AI features (requires OpenAI API key)" 
-                              IsChecked="{Binding Source={x:Static local:AppState.AIEnabled}}" 
                               Margin="0,5,0,10"
                               AutomationProperties.HelpText="Enables AI-powered automatic project categorization and summary generation"/>
                     
-                    <Grid IsEnabled="{Binding IsChecked, ElementName=EnableAICheckBox}">
+                    <Grid IsEnabled="{Binding ElementName=EnableAICheckBox, Path=IsChecked}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>

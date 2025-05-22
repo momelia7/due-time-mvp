@@ -22,6 +22,11 @@ namespace DueTime.UI
             InitializeComponent();
             Loaded += MainWindow_Loaded;
             SourceInitialized += MainWindow_SourceInitialized;
+            
+            // DEBUG: Make window visible immediately
+            this.Show();
+            this.WindowState = WindowState.Normal;
+            this.Activate();
         }
         
         private void MainWindow_SourceInitialized(object? sender, EventArgs e)
@@ -87,13 +92,10 @@ namespace DueTime.UI
                 });
             };
             
-            // Show welcome notification on first run
-            if (AppState.IsFirstRun)
-            {
-                _notifyIcon.BalloonTipTitle = "Welcome to DueTime";
-                _notifyIcon.BalloonTipText = "Time tracking has started automatically. You can always find DueTime here in the system tray.";
-                _notifyIcon.ShowBalloonTip(5000);
-            }
+            // Always show notification to help find the app
+            _notifyIcon.BalloonTipTitle = "DueTime is running";
+            _notifyIcon.BalloonTipText = "Time tracking has started. You can find DueTime here in the system tray.";
+            _notifyIcon.ShowBalloonTip(5000);
         }
         
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
