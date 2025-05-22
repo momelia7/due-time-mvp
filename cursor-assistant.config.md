@@ -1,19 +1,38 @@
-# Cursor Assistant Rules for DueTime Project
+# Cursor Assistant Configuration for DueTime
 
-1. **Follow the Dev Spec Exactly**  
-   Only implement code or create files in the exact order and with the exact content outlined in `DueTime_Dev_MVP`.  
+## Project Overview
 
-2. **No Extra Changes**  
-   Do not add, remove, or modify any sections beyond what the user explicitly instructs.  
+DueTime is an automatic time tracking application built with .NET 6.0 that helps users understand and categorize how they spend their time on the computer.
 
-3. **Maintain Formatting**  
-   Preserve all indentation, code fences, comments, and file paths exactly as provided.  
+## Code Style Guidelines
 
-4. **Target .NET 8**  
-   Whenever the spec references .NET 6 (or any older TFMs), automatically retarget to `net8.0` (or `net8.0-windows` for WPF apps).  
+- Use C# 10.0 features (compatible with .NET 6.0)
+- Follow Microsoft's C# coding conventions
+- Use XML documentation comments for public APIs
+- Prefer async/await for asynchronous operations
+- Use nullable reference types (`string?` etc.)
+- Use dependency injection for service components
 
-5. **Wait for Confirmation**  
-   After each section is applied, pause and await the user’s explicit “ready” or confirmation before moving to the next step.  
+## Architecture Notes
 
-6. **Verify Build**  
-   After applying each section, automatically run `dotnet build` at the solution root and ensure it succeeds without errors before proceeding to the next step.
+The application follows a layered architecture:
+
+1. **DueTime.Tracking**: Core tracking logic and interfaces
+2. **DueTime.Data**: Data access and repository implementations
+3. **DueTime.UI**: WPF user interface
+
+## Important Implementation Details
+
+- Windows native API is used for window and activity tracking
+- SQLite database provides local storage
+- Windows DPAPI is used for secure storage of API keys
+- OpenAI API integration for optional AI features
+- Windows Registry used for startup configuration
+
+## Generate Code With These Considerations
+
+- Ensure all generated code is properly error-handled
+- Include XML documentation for public methods
+- Follow the established naming conventions
+- Consider potential threading issues in UI code
+- Respect the privacy-first design principles

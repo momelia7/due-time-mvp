@@ -36,6 +36,15 @@ namespace DueTime.UI.Views
         
         private async void WeeklySummary_Click(object sender, RoutedEventArgs e)
         {
+            // Check for trial expiration if not licensed
+            if (AppState.TrialExpired && !AppState.LicenseValid)
+            {
+                System.Windows.MessageBox.Show(
+                    "Your trial period has expired. Please enter a license key to use premium features.", 
+                    "Trial Expired", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             if (!AppState.AIEnabled || string.IsNullOrEmpty(AppState.ApiKeyPlaintext))
             {
                 System.Windows.MessageBox.Show("AI features are not enabled. Please enable AI and add your OpenAI API key in Settings.", 

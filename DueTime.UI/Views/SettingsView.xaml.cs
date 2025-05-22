@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using DueTime.Data;
 using Microsoft.Win32;
 
@@ -20,6 +21,71 @@ namespace DueTime.UI.Views
             // Register for AI checkbox changes
             EnableAICheckBox.Checked += EnableAICheckBox_Changed;
             EnableAICheckBox.Unchecked += EnableAICheckBox_Changed;
+            
+            // Set AI checkbox enabled state based on trial and license
+            EnableAICheckBox.IsEnabled = !AppState.TrialExpired || AppState.LicenseValid;
+            
+            // Update trial status text
+            UpdateTrialStatusText();
+        }
+        
+        /// <summary>
+        /// Updates the trial status text based on current state
+        /// </summary>
+        private void UpdateTrialStatusText()
+        {
+            if (AppState.LicenseValid)
+            {
+                TrialStatusText.Text = "License activated - Premium features enabled";
+                TrialStatusText.Foreground = System.Windows.Media.Brushes.Green;
+            }
+            else if (AppState.TrialExpired)
+            {
+                TrialStatusText.Text = "Trial period ended - Please enter a license key to continue using premium features";
+                TrialStatusText.Foreground = System.Windows.Media.Brushes.Red;
+            }
+            else
+            {
+                int daysRemaining = App.TRIAL_DAYS - (int)(DateTime.Today - AppState.InstallDate).TotalDays;
+                TrialStatusText.Text = $"Trial period: {daysRemaining} days remaining for premium features";
+                TrialStatusText.Foreground = System.Windows.Media.Brushes.Orange;
+            }
+        }
+
+        private void LicenseKeyTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                ActivateLicense_Click(sender, e);
+                e.Handled = true;
+            }
+        }
+
+        private void ActivateLicense_Click(object sender, RoutedEventArgs e)
+        {
+            string licenseKey = LicenseKeyTextBox.Text.Trim();
+            
+            if (string.IsNullOrEmpty(licenseKey))
+            {
+                System.Windows.MessageBox.Show("Please enter a valid license key", "License Activation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            
+            // For demo, we'll accept any non-empty key
+            // In a production app, this would validate against a license server or check a signature
+            
+            // Save the license key
+            SettingsManager.SaveSetting("LicenseKey", licenseKey);
+            
+            // Update app state
+            AppState.LicenseValid = true;
+            AppState.TrialExpired = false;
+            
+            // Update UI
+            EnableAICheckBox.IsEnabled = true;
+            UpdateTrialStatusText();
+            
+            System.Windows.MessageBox.Show("License activated successfully!", "License Activation", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void BackupButton_Click(object sender, RoutedEventArgs e)
@@ -120,6 +186,15 @@ namespace DueTime.UI.Views
             }
             else
             {
+                // Check if trial has expired and no license
+                if (AppState.TrialExpired && !AppState.LicenseValid)
+                {
+                    System.Windows.MessageBox.Show(
+                        "Your trial period has expired. Please enter a license key to use premium features.", 
+                        "Trial Expired", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                
                 // Save the API key securely
                 SecureStorage.SaveApiKey(apiKey);
                 AppState.ApiKeyPlaintext = apiKey;
@@ -193,6 +268,19 @@ namespace DueTime.UI.Views
                     AppState.AIEnabled = false;
                     ApiKeyPasswordBox.Password = string.Empty;
                     
+                    // Clear license key and restore default trial state
+                    SettingsManager.DeleteSetting("LicenseKey");
+                    AppState.LicenseValid = false;
+                    
+                    // Reset install date to current date
+                    AppState.InstallDate = DateTime.Today;
+                    SettingsManager.SaveSetting("InstallDate", AppState.InstallDate.ToString("yyyy-MM-dd"));
+                    AppState.TrialExpired = false;
+                    
+                    // Update UI
+                    UpdateTrialStatusText();
+                    EnableAICheckBox.IsEnabled = true;
+                    
                     System.Windows.MessageBox.Show("All data has been successfully deleted.", "Data Cleared");
                     
                     // Restart tracking
@@ -208,8 +296,43 @@ namespace DueTime.UI.Views
             }
         }
 
+#if DEBUG
+        // For testing only - in debug mode
+        private void SimulateTrialExpiration_Click(object sender, RoutedEventArgs e)
+        {
+            // Set install date to 31 days ago
+            DateTime expiredInstallDate = DateTime.Today.AddDays(-31);
+            SettingsManager.SaveSetting("InstallDate", expiredInstallDate.ToString("yyyy-MM-dd"));
+            
+            // Update app state
+            AppState.InstallDate = expiredInstallDate;
+            AppState.TrialExpired = true;
+            AppState.LicenseValid = false;
+            
+            // Update UI
+            UpdateTrialStatusText();
+            EnableAICheckBox.IsEnabled = false;
+            
+            System.Windows.MessageBox.Show("Trial period has been manually expired for testing.", "Testing");
+        }
+#endif
+
         private void EnableAICheckBox_Changed(object sender, RoutedEventArgs e)
         {
+            // If enabling AI and trial expired with no license, prevent it
+            if (EnableAICheckBox.IsChecked == true && AppState.TrialExpired && !AppState.LicenseValid)
+            {
+                System.Windows.MessageBox.Show(
+                    "Your trial period has expired. Please enter a license key to use premium features.",
+                    "Trial Expired", 
+                    MessageBoxButton.OK, 
+                    MessageBoxImage.Warning);
+                
+                // Prevent checking the box
+                EnableAICheckBox.IsChecked = false;
+                return;
+            }
+            
             if (EnableAICheckBox.IsChecked == true)
             {
                 // If API key exists but not loaded, load it now

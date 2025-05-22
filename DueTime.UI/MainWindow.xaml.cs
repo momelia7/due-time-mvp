@@ -120,7 +120,11 @@ namespace DueTime.UI
             });
             
             // If entry has no project and AI is enabled, suggest a project
-            if (entry.ProjectId == null && AppState.AIEnabled && !string.IsNullOrEmpty(AppState.ApiKeyPlaintext))
+            // Also check for trial period and license validity
+            if (entry.ProjectId == null && 
+                AppState.AIEnabled && 
+                !string.IsNullOrEmpty(AppState.ApiKeyPlaintext) &&
+                (!AppState.TrialExpired || AppState.LicenseValid))
             {
                 // Launch suggestion in background to avoid blocking UI
                 await SuggestProjectForEntryAsync(entry);
@@ -132,7 +136,11 @@ namespace DueTime.UI
             try
             {
                 // Only proceed if we still have AI enabled and entry still doesn't have project
-                if (!AppState.AIEnabled || entry.ProjectId != null || string.IsNullOrEmpty(AppState.ApiKeyPlaintext))
+                // Also check for trial period and license validity
+                if (!AppState.AIEnabled || 
+                    entry.ProjectId != null || 
+                    string.IsNullOrEmpty(AppState.ApiKeyPlaintext) ||
+                    (AppState.TrialExpired && !AppState.LicenseValid))
                 {
                     return;
                 }

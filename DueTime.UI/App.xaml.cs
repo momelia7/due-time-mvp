@@ -9,6 +9,9 @@ namespace DueTime.UI
     /// </summary>
     public partial class App : System.Windows.Application
     {
+        // Trial period in days
+        public const int TRIAL_DAYS = 30;
+        
         protected override void OnStartup(System.Windows.StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -52,6 +55,51 @@ namespace DueTime.UI
                 
             // Detect first run
             AppState.IsFirstRun = (AppState.Projects.Count == 0 && AppState.Entries.Count == 0);
+            
+            // Handle trial period and license
+            CheckTrialAndLicense();
+        }
+        
+        /// <summary>
+        /// Checks trial period status and license validity
+        /// </summary>
+        private void CheckTrialAndLicense()
+        {
+            // Check if license key exists
+            string? licenseKey = SettingsManager.GetSetting("LicenseKey");
+            AppState.LicenseValid = !string.IsNullOrEmpty(licenseKey);
+            
+            // If license is valid, trial status doesn't matter
+            if (AppState.LicenseValid)
+            {
+                AppState.TrialExpired = false;
+                return;
+            }
+            
+            // Check install date
+            string? installDateStr = SettingsManager.GetSetting("InstallDate");
+            
+            if (installDateStr == null && AppState.IsFirstRun)
+            {
+                // First run - set install date to today
+                AppState.InstallDate = DateTime.Today;
+                SettingsManager.SaveSetting("InstallDate", AppState.InstallDate.ToString("yyyy-MM-dd"));
+            }
+            else if (installDateStr != null)
+            {
+                // Parse stored install date
+                AppState.InstallDate = DateTime.Parse(installDateStr);
+            }
+            else
+            {
+                // Fallback if something went wrong
+                AppState.InstallDate = DateTime.Today;
+                SettingsManager.SaveSetting("InstallDate", AppState.InstallDate.ToString("yyyy-MM-dd"));
+            }
+            
+            // Calculate trial status
+            int daysUsed = (int)(DateTime.Today - AppState.InstallDate).TotalDays;
+            AppState.TrialExpired = daysUsed >= TRIAL_DAYS;
         }
     }
 }

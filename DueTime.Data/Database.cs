@@ -53,6 +53,10 @@ namespace DueTime.Data
                 ProjectId INTEGER NOT NULL,
                 FOREIGN KEY(ProjectId) REFERENCES Projects(Id) ON DELETE CASCADE
             );
+            CREATE TABLE IF NOT EXISTS Settings (
+                Key TEXT PRIMARY KEY,
+                Value TEXT
+            );
             ";
             cmd.ExecuteNonQuery();
         }
