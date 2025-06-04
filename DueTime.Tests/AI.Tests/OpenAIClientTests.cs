@@ -166,5 +166,96 @@ namespace DueTime.Tests.AI
             // Assert
             Assert.False(result);
         }
+
+        [Fact]
+        public async Task GetProjectSuggestionAsync_WithValidInput_ReturnsSuggestion()
+        {
+            // This test requires a valid API key and internet connection
+            // For CI/CD, we should mock the HTTP response instead
+            
+            // Skip this test if no API key is available
+            string apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                // Skip test if no API key
+                return;
+            }
+            
+            // Arrange
+            string windowTitle = "Microsoft Visual Studio - DueTime.sln";
+            string applicationName = "devenv";
+            string[] projectNames = new[] { "Development", "Meetings", "Research", "Documentation" };
+            
+            // Act
+            string? suggestion = await OpenAIClient.GetProjectSuggestionAsync(
+                windowTitle, 
+                applicationName, 
+                projectNames, 
+                apiKey);
+            
+            // Assert
+            Assert.NotNull(suggestion);
+            // The suggestion should be one of our project names
+            Assert.Contains(suggestion, projectNames);
+        }
+        
+        [Fact]
+        public async Task GetProjectSuggestionAsync_WithCachedResult_ReturnsCachedValue()
+        {
+            // Skip this test if no API key is available
+            string apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                // Skip test if no API key
+                return;
+            }
+            
+            // Arrange
+            string windowTitle = "Unique Window Title For Cache Test";
+            string applicationName = "TestApp";
+            string[] projectNames = new[] { "Development", "Meetings", "Research", "Documentation" };
+            
+            // Clear the cache first
+            OpenAIClient.ClearCache();
+            
+            // Act - First call should hit the API
+            string? firstSuggestion = await OpenAIClient.GetProjectSuggestionAsync(
+                windowTitle, 
+                applicationName, 
+                projectNames, 
+                apiKey);
+                
+            // Second call with same parameters should use cache
+            string? secondSuggestion = await OpenAIClient.GetProjectSuggestionAsync(
+                windowTitle, 
+                applicationName, 
+                projectNames, 
+                apiKey);
+            
+            // Assert
+            Assert.NotNull(firstSuggestion);
+            Assert.NotNull(secondSuggestion);
+            Assert.Equal(firstSuggestion, secondSuggestion);
+        }
+        
+        [Fact]
+        public async Task GetProjectSuggestionAsync_WithInvalidApiKey_ReturnsNull()
+        {
+            // Arrange
+            string windowTitle = "Test Window";
+            string applicationName = "TestApp";
+            string[] projectNames = new[] { "Development", "Meetings" };
+            string invalidApiKey = "invalid-key";
+            
+            // Act
+            string? suggestion = await OpenAIClient.GetProjectSuggestionAsync(
+                windowTitle, 
+                applicationName, 
+                projectNames, 
+                invalidApiKey);
+            
+            // Assert
+            Assert.Null(suggestion);
+        }
     }
 } 

@@ -8,6 +8,24 @@ namespace DueTime.Data
 {
     public class SQLiteTimeEntryRepository : ITimeEntryRepository
     {
+        private readonly string? _connectionString;
+        
+        /// <summary>
+        /// Initializes a new instance of the SQLiteTimeEntryRepository class
+        /// </summary>
+        public SQLiteTimeEntryRepository()
+        {
+            _connectionString = null; // Use default connection from Database class
+        }
+        
+        /// <summary>
+        /// Initializes a new instance of the SQLiteTimeEntryRepository class with a specific connection string
+        /// </summary>
+        public SQLiteTimeEntryRepository(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+        
         public async Task AddTimeEntryAsync(TimeEntry entry)
         {
             // If entry.ProjectId is not set, try to auto-assign via rules

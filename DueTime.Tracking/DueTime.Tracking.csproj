@@ -8,9 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="ISystemEvents.cs" />
+    <Compile Include="Interfaces.cs" />
     <Compile Include="WindowsSystemEvents.cs" />
     <Compile Include="TrackingService.cs" />
+    <Compile Include="Services\FakeSystemEvents.cs" />
   </ItemGroup>
 
   <ItemGroup>

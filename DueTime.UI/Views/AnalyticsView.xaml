@@ -1,0 +1,157 @@
+<UserControl x:Class="DueTime.UI.Views.AnalyticsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:DueTime.UI.Views"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="15">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Header -->
+            <TextBlock Grid.Row="0" Text="Activity Analytics" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+            
+            <!-- Key Statistics -->
+            <Grid Grid.Row="1" Margin="0,0,0,15">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="150"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Total Time -->
+                <Border Grid.Column="0" BorderThickness="1" BorderBrush="#22000000" CornerRadius="5" Margin="5" 
+                      Background="#05000000">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Total Time" FontSize="12" Foreground="#99000000"/>
+                        <TextBlock Grid.Row="1" Text="{Binding TotalTrackedTime}" FontSize="20" FontWeight="SemiBold"/>
+                    </Grid>
+                </Border>
+                
+                <!-- Most Active Project -->
+                <Border Grid.Column="1" BorderThickness="1" BorderBrush="#22000000" CornerRadius="5" Margin="5" 
+                      Background="#05000000">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Top Project" FontSize="12" Foreground="#99000000"/>
+                        <TextBlock Grid.Row="1" Text="{Binding MostActiveProject}" FontSize="20" FontWeight="SemiBold"/>
+                    </Grid>
+                </Border>
+                
+                <!-- Most Active Day -->
+                <Border Grid.Column="2" BorderThickness="1" BorderBrush="#22000000" CornerRadius="5" Margin="5" 
+                      Background="#05000000">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Most Active Day" FontSize="12" Foreground="#99000000"/>
+                        <TextBlock Grid.Row="1" Text="{Binding MostActiveDay}" FontSize="20" FontWeight="SemiBold"/>
+                    </Grid>
+                </Border>
+                
+                <!-- Entry Count -->
+                <Border Grid.Column="3" BorderThickness="1" BorderBrush="#22000000" CornerRadius="5" Margin="5" 
+                      Background="#05000000">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Total Entries" FontSize="12" Foreground="#99000000"/>
+                        <TextBlock Grid.Row="1" Text="{Binding EntryCount}" FontSize="20" FontWeight="SemiBold"/>
+                    </Grid>
+                </Border>
+            </Grid>
+            
+            <!-- Charts Section -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="350"/>
+                    <ColumnDefinition Width="350"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Time by Project (Pie Chart) -->
+                <Grid Grid.Column="0" Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="300"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Time by Project" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    
+                    <Border Grid.Row="1" BorderThickness="1" BorderBrush="#22000000" CornerRadius="5" 
+                          Background="#05000000">
+                        <lvc:PieChart Series="{Binding ProjectSeries}" 
+                                    LegendPosition="Right"/>
+                    </Border>
+                </Grid>
+                
+                <!-- Daily Activity (Column Chart) -->
+                <Grid Grid.Column="1" Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="300"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Daily Activity" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    
+                    <Border Grid.Row="1" BorderThickness="1" BorderBrush="#22000000" CornerRadius="5" 
+                          Background="#05000000">
+                        <lvc:CartesianChart Series="{Binding DailyActivitySeries}"/>
+                    </Border>
+                </Grid>
+            </Grid>
+            
+            <!-- AI Insights Section -->
+            <Grid Grid.Row="3" Margin="0,15,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="AI-Powered Insights" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                
+                <Border Grid.Row="1" BorderThickness="1" BorderBrush="#22000000" CornerRadius="5" 
+                      Background="#05000000" Padding="15">
+                    <Grid>
+                        <!-- Use a simple visibility binding to avoid complex converters -->
+                        <TextBlock Text="{Binding AIInsights}" TextWrapping="Wrap" 
+                                 Visibility="{Binding IsLoadingInsights, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                        
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" 
+                                  Visibility="{Binding IsLoadingInsights, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="Analyzing your productivity patterns" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <ProgressBar IsIndeterminate="True" Width="100" Height="10"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+            
+            <!-- Refresh Button -->
+            <Button Grid.Row="4" Content="_Refresh Analytics" 
+                  HorizontalAlignment="Right" 
+                  Margin="0,15,0,0" 
+                  Padding="10,5" 
+                  Click="RefreshButton_Click"/>
+        </Grid>
+    </ScrollViewer>
+</UserControl> 

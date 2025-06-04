@@ -10,6 +10,7 @@ namespace DueTime.Data
     public static class Database
     {
         public static string DbPath { get; private set; }
+        private static string _connectionString;
         
         // Current schema version
         private const int CurrentSchemaVersion = 2;
@@ -21,11 +22,37 @@ namespace DueTime.Data
             if (!Directory.Exists(dueTimeDir))
                 Directory.CreateDirectory(dueTimeDir);
             DbPath = Path.Combine(dueTimeDir, "DueTime.db");
+            _connectionString = $"Data Source={DbPath};Cache=Shared";
+        }
+        
+        /// <summary>
+        /// Initializes the database with a custom connection string
+        /// </summary>
+        public static void Initialize(string connectionString)
+        {
+            _connectionString = connectionString;
+            
+            // Extract the DbPath from the connection string if possible
+            if (connectionString.Contains("Data Source="))
+            {
+                var parts = connectionString.Split(';');
+                foreach (var part in parts)
+                {
+                    if (part.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+                    {
+                        DbPath = part.Substring("Data Source=".Length);
+                        break;
+                    }
+                }
+            }
+            
+            // Initialize the schema
+            InitializeSchema();
         }
 
         public static SqliteConnection GetConnection()
         {
-            var conn = new SqliteConnection($"Data Source={DbPath};Cache=Shared");
+            var conn = new SqliteConnection(_connectionString);
             conn.Open();
             return conn;
         }

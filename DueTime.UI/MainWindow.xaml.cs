@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using DueTime.Tracking;
 using DueTime.Data;
 using DueTime.UI.Utilities;
+using DueTime.UI.Views;
 
 namespace DueTime.UI
 {
@@ -21,6 +22,7 @@ namespace DueTime.UI
         private bool _hasShownTrayNotification = false;
         private bool _isTrackingPaused = false;
         private ToolStripMenuItem? _pauseResumeMenuItem;
+        private ToolStripMenuItem? _serviceMenuItem;
         
         // Status message property for binding
         private string _statusMessage = string.Empty;
@@ -138,6 +140,17 @@ namespace DueTime.UI
             };
             contextMenu.Items.Add(_pauseResumeMenuItem);
             
+            // Add service management menu item
+            _serviceMenuItem = new ToolStripMenuItem("Service Management");
+            _serviceMenuItem.Click += (s, e) =>
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ShowServiceManagement();
+                });
+            };
+            contextMenu.Items.Add(_serviceMenuItem);
+            
             contextMenu.Items.Add("-"); // Separator
             
             var exitItem = contextMenu.Items.Add("Exit");
@@ -163,12 +176,34 @@ namespace DueTime.UI
                 });
             };
             
+            // Initialize the NotificationManager with our NotifyIcon
+            NotificationManager.Initialize(_notifyIcon);
+            
             // Always show notification to help find the app
             _notifyIcon.BalloonTipTitle = "DueTime is running";
             _notifyIcon.BalloonTipText = "Time tracking has started. You can find DueTime here in the system tray.";
             _notifyIcon.ShowBalloonTip(5000);
             
             Logger.LogInfo("System tray icon initialized");
+        }
+        
+        /// <summary>
+        /// Shows the service management view
+        /// </summary>
+        private void ShowServiceManagement()
+        {
+            // Create a new window to host the service management view
+            var window = new Window
+            {
+                Title = "DueTime Service Management",
+                Width = 600,
+                Height = 500,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                Content = new ServiceManagementView()
+            };
+            
+            window.ShowDialog();
         }
         
         /// <summary>
@@ -226,54 +261,85 @@ namespace DueTime.UI
             }
         }
         
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             try
             {
-                // Initialize tracking engine
-                var systemEvents = new WindowsSystemEvents();
+                // Check if the background service is running
+                bool isServiceRunning = ServiceCommunication.IsServiceRunning();
                 
-                _trackingService = new TrackingService(systemEvents, AppState.EntryRepo);
-                _trackingService.TimeEntryRecorded += TrackingService_TimeEntryRecorded;
-                _trackingService.Start();
+                if (isServiceRunning)
+                {
+                    // If the background service is running, we don't need to start our own tracking
+                    Logger.LogInfo("Background service is running, skipping local tracking initialization");
+                    await ShowStatusMessageAsync("Background service is running. Time tracking is active.");
+                    
+                    // Update menu items
+                    if (_pauseResumeMenuItem != null)
+                    {
+                        _pauseResumeMenuItem.Text = "Service is tracking (managed via Service Management)";
+                        _pauseResumeMenuItem.Enabled = false;
+                    }
+                }
+                else
+                {
+                    // Initialize tracking engine locally
+                    var systemEvents = new WindowsSystemEvents();
+                    
+                    _trackingService = new TrackingService(systemEvents, AppState.EntryRepo);
+                    _trackingService.TimeEntryRecorded += TrackingService_TimeEntryRecorded;
+                    _trackingService.Start();
+                    
+                    // Store reference for other components to use
+                    AppState.TrackingService = _trackingService;
+                    
+                    Logger.LogInfo("Local tracking service initialized and started");
+                }
                 
-                // Store reference for other components to use
-                AppState.TrackingService = _trackingService;
+                // Initialize database
+                Database.InitializeSchema();
                 
-                Logger.LogInfo("Tracking service initialized and started");
+                // Initialize app state
+                await InitializeAppStateAsync();
+                
+                // Configure AI if enabled
+                if (AppState.AIEnabled && !string.IsNullOrEmpty(AppState.ApiKeyPlaintext) && _trackingService != null)
+                {
+                    _trackingService.ConfigureAI(true, AppState.ApiKeyPlaintext, AppState.ProjectRepo);
+                    Logger.LogInfo("AI categorization enabled");
+                }
             }
             catch (Exception ex)
             {
                 Logger.LogException(ex, "MainWindow_Loaded");
                 MessageBox.Show(
-                    "There was a problem initializing the tracking service. Some features may not work correctly.",
-                    "Initialization Error",
+                    $"An error occurred during startup: {ex.Message}\n\nThe application may not function correctly.",
+                    "Startup Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
         }
-
+        
         private async void TrackingService_TimeEntryRecorded(object? sender, TimeEntryRecordedEventArgs e)
         {
-            var entry = e.Entry;
-            
-            // Add to UI collection
-            Dispatcher.Invoke(() =>
+            try
             {
-                AppState.Entries.Add(entry);
-            });
-            
-            Logger.LogInfo($"Time entry recorded: {entry.WindowTitle} ({entry.ApplicationName})");
-            
-            // If entry has no project and AI is enabled, suggest a project
-            // Also check for trial period and license validity
-            if (entry.ProjectId == null && 
-                AppState.AIEnabled && 
-                !string.IsNullOrEmpty(AppState.ApiKeyPlaintext) &&
-                (!AppState.TrialExpired || AppState.LicenseValid))
+                // Update UI with new entry if needed
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    // If we're on the Dashboard view, refresh the entries
+                    // This is handled by the DashboardViewModel
+                });
+                
+                // If entry has no project assigned, try to suggest one using AI
+                if (e.Entry.ProjectId == null && AppState.AIEnabled && !string.IsNullOrEmpty(AppState.ApiKeyPlaintext))
+                {
+                    await SuggestProjectForEntryAsync(e.Entry);
+                }
+            }
+            catch (Exception ex)
             {
-                // Launch suggestion in background to avoid blocking UI
-                await SuggestProjectForEntryAsync(entry);
+                Logger.LogException(ex, "TimeEntryRecorded");
             }
         }
         
@@ -281,142 +347,151 @@ namespace DueTime.UI
         {
             try
             {
-                // Only proceed if we still have AI enabled and entry still doesn't have project
-                // Also check for trial period and license validity
-                if (!AppState.AIEnabled || 
-                    entry.ProjectId != null || 
-                    string.IsNullOrEmpty(AppState.ApiKeyPlaintext) ||
-                    (AppState.TrialExpired && !AppState.LicenseValid))
-                {
+                // Skip very short entries (< 30 seconds)
+                TimeSpan duration = entry.EndTime - entry.StartTime;
+                if (duration.TotalSeconds < 30)
                     return;
-                }
                 
-                // Get all project names for the suggestion
-                string[] projectNames = AppState.Projects.Select(p => p.Name).ToArray();
-                
-                // Don't bother calling API if we have no projects
-                if (projectNames.Length == 0)
-                {
-                    return;
-                }
-                
-                // Show status message
-                await ShowStatusMessageAsync("Getting AI suggestion...", 0);
-                
-                Logger.LogInfo($"Requesting AI project suggestion for: {entry.WindowTitle}");
+                // Get all projects for context
+                var projects = await AppState.ProjectRepo.GetAllProjectsAsync();
+                if (projects.Count == 0)
+                    return; // No projects to suggest
+                    
+                // Get project names for AI
+                string[] projectNames = projects.Select(p => p.Name).ToArray();
                 
                 // Get suggestion from OpenAI
                 string? suggestion = await OpenAIClient.GetProjectSuggestionAsync(
-                    entry.WindowTitle ?? string.Empty,
-                    entry.ApplicationName ?? string.Empty,
+                    entry.WindowTitle,
+                    entry.ApplicationName,
                     projectNames,
-                    AppState.ApiKeyPlaintext);
+                    AppState.ApiKeyPlaintext!);
                 
-                // Apply suggestion if valid
-                if (!string.IsNullOrEmpty(suggestion) && suggestion.ToLower() != "none")
+                if (string.IsNullOrEmpty(suggestion) || suggestion == "None")
+                    return;
+                
+                // Find matching project
+                var matchingProject = projects.FirstOrDefault(p => 
+                    string.Equals(p.Name, suggestion, StringComparison.OrdinalIgnoreCase));
+                
+                if (matchingProject != null)
                 {
-                    var project = AppState.Projects.FirstOrDefault(
-                        p => p.Name.Equals(suggestion, StringComparison.OrdinalIgnoreCase));
+                    // Update the entry with the suggested project
+                    await AppState.EntryRepo.UpdateEntryProjectAsync(entry.Id, matchingProject.ProjectId);
                     
-                    if (project != null)
+                    // Log the suggestion
+                    Logger.LogInfo($"AI suggested project '{matchingProject.Name}' for entry: {entry.WindowTitle}");
+                    
+                    // Show notification if enabled
+                    Dispatcher.Invoke(() =>
                     {
-                        // Update entry in database
-                        await AppState.EntryRepo.UpdateEntryProjectAsync(entry.Id, project.ProjectId);
-                        
-                        Logger.LogInfo($"AI suggested project '{project.Name}' for entry: {entry.WindowTitle}");
-                        
-                        // Update status message
-                        await ShowStatusMessageAsync($"AI suggested project: {project.Name}", 3000);
-                        
-                        // Update UI
-                        Dispatcher.Invoke(() =>
-                        {
-                            // Update the entry's ProjectId
-                            entry.ProjectId = project.ProjectId;
-                            
-                            // Force refresh of the DataGrid item
-                            int index = AppState.Entries.IndexOf(entry);
-                            if (index >= 0)
-                            {
-                                AppState.Entries.RemoveAt(index);
-                                AppState.Entries.Insert(index, entry);
-                            }
-                        });
-                    }
-                    else
-                    {
-                        await ShowStatusMessageAsync("AI suggestion could not be applied", 3000);
-                    }
-                }
-                else
-                {
-                    Logger.LogInfo($"AI did not suggest a project for: {entry.WindowTitle}");
-                    await ShowStatusMessageAsync("No AI suggestion available", 3000);
+                        NotificationManager.ShowInfo(
+                            $"Entry automatically categorized as '{matchingProject.Name}'",
+                            "AI Suggestion");
+                    });
                 }
             }
             catch (Exception ex)
             {
-                // Just log error, don't show UI since this is background processing
-                Logger.LogException(ex, "SuggestProjectForEntryAsync");
-                await ShowStatusMessageAsync("AI suggestion error", 3000);
+                Logger.LogException(ex, "SuggestProjectForEntry");
             }
         }
-
+        
+        private async Task InitializeAppStateAsync()
+        {
+            try
+            {
+                // Load settings from database
+                // TODO: Implement settings storage and retrieval
+                
+                // Load projects
+                var projects = await AppState.ProjectRepo.GetAllProjectsAsync();
+                AppState.Projects.Clear();
+                foreach (var project in projects)
+                {
+                    AppState.Projects.Add(project);
+                }
+                
+                // Load today's entries
+                var entries = await AppState.EntryRepo.GetEntriesByDateAsync(DateTime.Today);
+                AppState.Entries.Clear();
+                foreach (var entry in entries)
+                {
+                    AppState.Entries.Add(entry);
+                }
+                
+                Logger.LogInfo($"App state initialized with {AppState.Projects.Count} projects and {AppState.Entries.Count} entries");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, "InitializeAppState");
+                MessageBox.Show(
+                    $"An error occurred while loading data: {ex.Message}",
+                    "Data Loading Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+        
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            // Check if we're really exiting or just hiding to tray
-            if (_notifyIcon != null && !((App)Application.Current).IsShuttingDown)
+            // Check if this is a true exit or just minimizing to tray
+            if (!_isExiting)
             {
-                // Cancel the close operation and hide the window instead
                 e.Cancel = true;
                 this.Hide();
                 
-                // Show notification that app is still running (only once per session)
+                // Show tray notification the first time
                 if (!_hasShownTrayNotification)
                 {
-                    _notifyIcon.BalloonTipTitle = "DueTime is still running";
-                    _notifyIcon.BalloonTipText = "DueTime will continue tracking in the background. You can find it in the system tray.";
-                    _notifyIcon.ShowBalloonTip(3000);
-                    _hasShownTrayNotification = true;
+                    _notifyIcon?.ShowBalloonTip(
+                        5000,
+                        "DueTime is still running",
+                        "The application will continue tracking in the background. Click the tray icon to reopen.",
+                        ToolTipIcon.Info);
                     
-                    Logger.LogInfo("Window hidden to system tray");
+                    _hasShownTrayNotification = true;
                 }
+                
+                return;
             }
-            else
-            {
-                // If we're really exiting, stop tracking
-                _trackingService?.Stop();
-                Logger.LogInfo("Window closing, tracking stopped");
-            }
+            
+            base.OnClosing(e);
         }
+        
+        private bool _isExiting = false;
         
         private void CleanupAndExit()
         {
             try
             {
-                // Set the shutdown flag in App
-                ((App)Application.Current).IsShuttingDown = true;
+                // Stop tracking service if it's running locally
+                if (_trackingService != null && !ServiceCommunication.IsServiceRunning())
+                {
+                    _trackingService.Stop();
+                    Logger.LogInfo("Tracking service stopped");
+                }
                 
-                // Dispose of the NotifyIcon before exiting
+                // Dispose tray icon
                 if (_notifyIcon != null)
                 {
                     _notifyIcon.Visible = false;
                     _notifyIcon.Dispose();
-                    _notifyIcon = null;
                 }
                 
-                // Stop tracking
-                _trackingService?.Stop();
+                // Mark as exiting and close
+                _isExiting = true;
+                this.Close();
                 
-                Logger.LogInfo("Application exit requested by user from tray menu");
-                
-                // Close the window (this time it won't be canceled)
-                Application.Current.Shutdown();
+                // Exit application
+                System.Windows.Application.Current.Shutdown();
             }
             catch (Exception ex)
             {
                 Logger.LogException(ex, "CleanupAndExit");
-                Application.Current.Shutdown(); // Force shutdown even if there was an error
+                
+                // Force exit in case of error
+                Environment.Exit(1);
             }
         }
     }

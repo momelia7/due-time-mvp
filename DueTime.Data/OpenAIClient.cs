@@ -32,17 +32,24 @@ namespace DueTime.Data
             httpClient.DefaultRequestHeaders.Clear();
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
             
+            // Use the chat completions API with GPT-3.5-turbo
+            var messages = new[]
+            {
+                new { role = "system", content = "You are a helpful assistant that categorizes work activities into projects. Respond only with the project name that best matches the activity, or 'None' if no project matches." },
+                new { role = "user", content = $"Projects: [{string.Join(", ", projectNames)}]. Activity: Window title '{windowTitle}', Application '{applicationName}'. Which project does this most likely belong to?" }
+            };
+            
             var requestBody = new
             {
-                model = "text-davinci-003",
-                prompt = $"Projects: [{string.Join(", ", projectNames)}]. Activity: Window title '{windowTitle}', Application '{applicationName}'. Which project does this most likely belong to?",
+                model = "gpt-3.5-turbo",
+                messages = messages,
                 max_tokens = 50,
                 temperature = 0.3
             };
             
             try
             {
-                var response = await httpClient.PostAsJsonAsync("https://api.openai.com/v1/completions", requestBody);
+                var response = await httpClient.PostAsJsonAsync("https://api.openai.com/v1/chat/completions", requestBody);
                 if (response.IsSuccessStatusCode)
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
@@ -51,7 +58,10 @@ namespace DueTime.Data
                     
                     if (choicesElement.GetArrayLength() > 0)
                     {
-                        var suggestion = choicesElement[0].GetProperty("text").GetString()?.Trim();
+                        var suggestion = choicesElement[0]
+                            .GetProperty("message")
+                            .GetProperty("content")
+                            .GetString()?.Trim();
                         
                         // Try to match the suggestion with one of the project names
                         if (suggestion != null && projectNames.Length > 0)
@@ -93,17 +103,24 @@ namespace DueTime.Data
             httpClient.DefaultRequestHeaders.Clear();
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
             
+            // Use the chat completions API with GPT-3.5-turbo
+            var messages = new[]
+            {
+                new { role = "system", content = "You are a helpful assistant that provides insightful summaries of work activity data. Provide a concise, professional summary that highlights key patterns and achievements." },
+                new { role = "user", content = prompt }
+            };
+            
             var requestBody = new
             {
-                model = "text-davinci-003",
-                prompt = prompt,
-                max_tokens = 200,
+                model = "gpt-3.5-turbo",
+                messages = messages,
+                max_tokens = 300,
                 temperature = 0.7
             };
             
             try
             {
-                var response = await httpClient.PostAsJsonAsync("https://api.openai.com/v1/completions", requestBody);
+                var response = await httpClient.PostAsJsonAsync("https://api.openai.com/v1/chat/completions", requestBody);
                 if (response.IsSuccessStatusCode)
                 {
                     var responseBody = await response.Content.ReadAsStringAsync();
@@ -112,7 +129,10 @@ namespace DueTime.Data
                     
                     if (choicesElement.GetArrayLength() > 0)
                     {
-                        return choicesElement[0].GetProperty("text").GetString()?.Trim();
+                        return choicesElement[0]
+                            .GetProperty("message")
+                            .GetProperty("content")
+                            .GetString()?.Trim();
                     }
                 }
             }
@@ -134,23 +154,79 @@ namespace DueTime.Data
             httpClient.DefaultRequestHeaders.Clear();
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
             
+            // Use the chat completions API with GPT-3.5-turbo
+            var messages = new[]
+            {
+                new { role = "system", content = "You are a helpful assistant." },
+                new { role = "user", content = "Say hello" }
+            };
+            
             var requestBody = new
             {
-                model = "text-davinci-003",
-                prompt = "Say hello",
+                model = "gpt-3.5-turbo",
+                messages = messages,
                 max_tokens = 5,
                 temperature = 0.3
             };
             
             try
             {
-                var response = await httpClient.PostAsJsonAsync("https://api.openai.com/v1/completions", requestBody);
+                var response = await httpClient.PostAsJsonAsync("https://api.openai.com/v1/chat/completions", requestBody);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception)
             {
                 return false;
             }
+        }
+        
+        /// <summary>
+        /// Gets AI-powered insights about time tracking patterns
+        /// </summary>
+        public static async Task<string?> GetTimeInsightsAsync(string timeData, string apiKey)
+        {
+            httpClient.DefaultRequestHeaders.Clear();
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+            
+            // Use the chat completions API with GPT-3.5-turbo
+            var messages = new[]
+            {
+                new { role = "system", content = "You are a productivity assistant that analyzes time tracking data and provides helpful insights. Focus on patterns, suggestions for improvement, and positive observations about productivity." },
+                new { role = "user", content = $"Based on this time tracking data, provide 3-4 helpful insights about productivity patterns:\n\n{timeData}" }
+            };
+            
+            var requestBody = new
+            {
+                model = "gpt-3.5-turbo",
+                messages = messages,
+                max_tokens = 350,
+                temperature = 0.7
+            };
+            
+            try
+            {
+                var response = await httpClient.PostAsJsonAsync("https://api.openai.com/v1/chat/completions", requestBody);
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseBody = await response.Content.ReadAsStringAsync();
+                    var jsonResponse = JsonDocument.Parse(responseBody);
+                    var choicesElement = jsonResponse.RootElement.GetProperty("choices");
+                    
+                    if (choicesElement.GetArrayLength() > 0)
+                    {
+                        return choicesElement[0]
+                            .GetProperty("message")
+                            .GetProperty("content")
+                            .GetString()?.Trim();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Log the exception if needed
+            }
+            
+            return null;
         }
         
         /// <summary>

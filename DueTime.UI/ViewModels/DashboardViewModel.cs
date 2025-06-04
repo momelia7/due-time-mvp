@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using DueTime.Data;
+using DueTime.UI.Utilities;
 
 namespace DueTime.UI.ViewModels
 {
@@ -30,9 +32,17 @@ namespace DueTime.UI.ViewModels
             }
         }
 
+        // Dictionary to track AI suggestion overrides
+        private Dictionary<string, int> _suggestionOverrides = new Dictionary<string, int>();
+        
+        // Currently suggested project for an entry
+        private Project? _suggestedProject;
+        private TimeEntry? _entryWithSuggestion;
+
         // Commands
         public ICommand ChangeProjectCommand { get; }
         public ICommand GenerateWeeklySummaryCommand { get; }
+        public ICommand SuggestProjectCommand { get; }
 
         // Repository dependencies
         private readonly ITimeEntryRepository _timeEntryRepo;
@@ -51,13 +61,33 @@ namespace DueTime.UI.ViewModels
             {
                 if (entry != null)
                 {
+                    // Check if this entry had a suggestion that's being overridden
                     await UpdateEntryProjectAsync(entry);
+                    
+                    // Track if user overrode an AI suggestion
+                    if (_entryWithSuggestion == entry && _suggestedProject != null && 
+                        entry.ProjectId != _suggestedProject.ProjectId)
+                    {
+                        TrackSuggestionOverride(_suggestedProject.Name, GetProjectNameById(entry.ProjectId));
+                    }
+                    
+                    // Clear the suggestion state
+                    _entryWithSuggestion = null;
+                    _suggestedProject = null;
                 }
             });
 
             GenerateWeeklySummaryCommand = new RelayCommand<object>(async _ => 
             {
                 await GenerateWeeklySummaryAsync();
+            });
+            
+            SuggestProjectCommand = new RelayCommand<TimeEntry>(async entry =>
+            {
+                if (entry != null)
+                {
+                    await SuggestProjectForEntryAsync(entry);
+                }
             });
 
             // Load today's data
@@ -79,8 +109,8 @@ namespace DueTime.UI.ViewModels
             }
             catch (Exception ex)
             {
-                // In a real app, log this error
-                System.Diagnostics.Debug.WriteLine($"Error loading entries: {ex.Message}");
+                Logger.LogException(ex, "LoadTodayEntries");
+                NotificationManager.ShowError("Failed to load today's time entries.");
             }
         }
 
@@ -98,8 +128,8 @@ namespace DueTime.UI.ViewModels
             }
             catch (Exception ex)
             {
-                // In a real app, log this error
-                System.Diagnostics.Debug.WriteLine($"Error loading projects: {ex.Message}");
+                Logger.LogException(ex, "LoadProjects");
+                NotificationManager.ShowError("Failed to load projects.");
             }
         }
 
@@ -120,8 +150,83 @@ namespace DueTime.UI.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating entry project: {ex.Message}");
-                // Could notify the UI of the error with a property
+                Logger.LogException(ex, "UpdateEntryProject");
+                NotificationManager.ShowError("Failed to update project for this entry.");
+            }
+        }
+        
+        private async Task SuggestProjectForEntryAsync(TimeEntry entry)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+            
+            if (!AppState.AIEnabled || string.IsNullOrEmpty(AppState.ApiKeyPlaintext))
+            {
+                NotificationManager.ShowWarning("AI suggestions are not enabled. Please enable AI in Settings and add an API key.");
+                return;
+            }
+            
+            try
+            {
+                // Show status message
+                await NotificationManager.ShowStatusAsync("Getting AI suggestion...", 0);
+                
+                // Get all project names for the suggestion
+                string[] projectNames = Projects.Select(p => p.Name).ToArray();
+                
+                // Call the OpenAI API to get a suggestion
+                string? suggestedProjectName = await OpenAIClient.GetProjectSuggestionAsync(
+                    entry.WindowTitle,
+                    entry.ApplicationName,
+                    projectNames,
+                    AppState.ApiKeyPlaintext);
+                
+                if (!string.IsNullOrEmpty(suggestedProjectName))
+                {
+                    // Find the project by name
+                    var suggestedProject = Projects.FirstOrDefault(p => 
+                        p.Name.Equals(suggestedProjectName, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (suggestedProject != null)
+                    {
+                        // Store the suggestion for tracking overrides
+                        _entryWithSuggestion = entry;
+                        _suggestedProject = suggestedProject;
+                        
+                        // Update the entry with the suggested project
+                        entry.ProjectId = suggestedProject.ProjectId;
+                        
+                        // Update in the database
+                        await UpdateEntryProjectAsync(entry);
+                        
+                        // Log and notify about the suggestion
+                        Logger.LogInfo($"AI suggested project '{suggestedProjectName}' for entry '{entry.WindowTitle}'");
+                        NotificationManager.ShowSuggestion($"Assigned to '{suggestedProjectName}'", "Project Suggestion");
+                        
+                        // Clear status message
+                        await NotificationManager.ShowStatusAsync("Suggestion applied", 2000);
+                    }
+                    else
+                    {
+                        // The suggested project name doesn't match any existing project
+                        NotificationManager.ShowWarning($"AI suggested '{suggestedProjectName}' but no matching project was found.");
+                        await NotificationManager.ShowStatusAsync("No matching project found", 2000);
+                    }
+                }
+                else
+                {
+                    // No suggestion was returned
+                    NotificationManager.ShowWarning("AI couldn't suggest a project for this entry.");
+                    await NotificationManager.ShowStatusAsync("No suggestion available", 2000);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, "SuggestProjectForEntry");
+                NotificationManager.ShowError("Failed to get AI suggestion. Check your API key and internet connection.");
+                await NotificationManager.ShowStatusAsync("Suggestion failed", 2000);
             }
         }
 
@@ -142,6 +247,47 @@ namespace DueTime.UI.ViewModels
 
             // For now this serves as a placeholder for the command
             await Task.CompletedTask;
+        }
+        
+        private void TrackSuggestionOverride(string suggestedProject, string chosenProject)
+        {
+            if (string.IsNullOrEmpty(suggestedProject) || string.IsNullOrEmpty(chosenProject))
+                return;
+                
+            // Create a unique key for this override pattern
+            string overrideKey = $"{suggestedProject}|{chosenProject}";
+            
+            // Increment the count for this override pattern
+            if (_suggestionOverrides.ContainsKey(overrideKey))
+            {
+                _suggestionOverrides[overrideKey]++;
+            }
+            else
+            {
+                _suggestionOverrides[overrideKey] = 1;
+            }
+            
+            // Log the override
+            Logger.LogInfo($"AI suggestion override: Suggested '{suggestedProject}' but user chose '{chosenProject}'");
+            
+            // Check if this override has happened multiple times
+            if (_suggestionOverrides[overrideKey] >= 3)
+            {
+                // Notify the user about creating a rule
+                NotificationManager.ShowSuggestionPattern(suggestedProject, chosenProject);
+                
+                // Reset the counter after notification
+                _suggestionOverrides[overrideKey] = 0;
+            }
+        }
+        
+        private string GetProjectNameById(int? projectId)
+        {
+            if (projectId == null)
+                return "(No Project)";
+                
+            var project = Projects.FirstOrDefault(p => p.ProjectId == projectId);
+            return project?.Name ?? "(Unknown Project)";
         }
 
         // INotifyPropertyChanged implementation

@@ -5,87 +5,139 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:DueTime.UI"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-        <StackPanel Margin="20">
-            <TextBlock Text="Application Settings" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+             d:DesignHeight="450" d:DesignWidth="800"
+             AutomationProperties.Name="Settings View">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Header -->
+            <TextBlock Grid.Row="0" Text="Application Settings" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"
+                     AutomationProperties.HeadingLevel="Level1"/>
             
             <!-- License Information -->
-            <GroupBox Header="License Information" Padding="10" Margin="0,0,0,20" AutomationProperties.Name="License Information Section">
-                <StackPanel>
-                    <TextBlock x:Name="TrialStatusText" Margin="0,0,0,10" FontWeight="Bold"/>
+            <GroupBox Grid.Row="1" Header="License Information" Padding="10" Margin="0,0,0,20" 
+                    AutomationProperties.Name="License Information Section">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
                     
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                        <TextBox x:Name="LicenseKeyTextBox" Width="200" Margin="0,0,10,0" 
+                    <TextBlock Grid.Row="0" x:Name="TrialStatusText" Margin="0,0,0,10" FontWeight="Bold"/>
+                    
+                    <Grid Grid.Row="1" Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="300"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBox Grid.Column="0" x:Name="LicenseKeyTextBox" Margin="0,0,10,0" 
                                  AutomationProperties.Name="License Key"
                                  AutomationProperties.HelpText="Enter your license key to activate premium features"
-                                 KeyDown="LicenseKeyTextBox_KeyDown"/>
-                        <Button Content="_Activate License" Click="ActivateLicense_Click" 
+                                 KeyDown="LicenseKeyTextBox_KeyDown"
+                                 TabIndex="0"/>
+                                 
+                        <Button Grid.Column="1" Content="_Activate License" Click="ActivateLicense_Click" 
                                 AutomationProperties.Name="Activate License Button"
-                                AutomationProperties.HelpText="Activate your license key"/>
-                    </StackPanel>
+                                AutomationProperties.HelpText="Activate your license key"
+                                TabIndex="1"/>
+                    </Grid>
                     
-                    <TextBlock Text="Enter a valid license key to unlock premium features permanently." 
+                    <TextBlock Grid.Row="2" Text="Enter a valid license key to unlock premium features permanently." 
                                TextWrapping="Wrap" FontStyle="Italic" Margin="0,5,0,0"/>
-                    
-                    <!-- Debug-only button is included in code-behind with #if DEBUG -->
-                </StackPanel>
+                </Grid>
             </GroupBox>
             
             <!-- General Settings -->
-            <GroupBox Header="General Settings" Padding="10" Margin="0,0,0,20" AutomationProperties.Name="General Settings Section">
-                <StackPanel>
-                    <CheckBox x:Name="StartupCheckBox" Content="_Run on startup" 
+            <GroupBox Grid.Row="2" Header="General Settings" Padding="10" Margin="0,0,0,20" 
+                    AutomationProperties.Name="General Settings Section">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <CheckBox Grid.Row="0" x:Name="StartupCheckBox" Content="_Run on startup" 
                               Checked="StartupCheckBox_Changed" Unchecked="StartupCheckBox_Changed" 
                               Margin="0,5"
-                              AutomationProperties.HelpText="When enabled, DueTime will start automatically when you log in to Windows"/>
-                    <CheckBox x:Name="DarkModeCheckBox" Content="Enable _dark mode" 
+                              AutomationProperties.HelpText="When enabled, DueTime will start automatically when you log in to Windows"
+                              TabIndex="2"/>
+                              
+                    <CheckBox Grid.Row="1" x:Name="DarkModeCheckBox" Content="Enable _dark mode" 
                               Margin="0,5"
-                              AutomationProperties.HelpText="Changes the application theme to dark colors"/>
+                              AutomationProperties.HelpText="Changes the application theme to dark colors"
+                              TabIndex="3"/>
                     
-                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                        <TextBlock Text="Active Explorer folder:" VerticalAlignment="Center"/>
-                        <Button Content="_Assign Folder"
+                    <Grid Grid.Row="2" Margin="0,5,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="300"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" Text="Active Explorer folder:" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="_Assign Folder"
                                 Command="{Binding AssignFolderCommand}"
                                 Margin="10,0,0,0"
+                                HorizontalAlignment="Left"
                                 AutomationProperties.Name="Assign Folder Button"
-                                AutomationProperties.HelpText="Capture the currently active File Explorer folder path"/>
-                    </StackPanel>
-                </StackPanel>
+                                AutomationProperties.HelpText="Capture the currently active File Explorer folder path"
+                                TabIndex="4"/>
+                    </Grid>
+                </Grid>
             </GroupBox>
             
             <!-- AI Features -->
-            <GroupBox Header="AI Features" Padding="10" Margin="0,0,0,20" AutomationProperties.Name="AI Features Section">
-                <StackPanel>
-                    <TextBlock Text="Enable AI-powered features for smarter time tracking and automatic project categorization. Your data remains private and is only shared with OpenAI when you enable this feature." 
+            <GroupBox Grid.Row="3" Header="AI Features" Padding="10" Margin="0,0,0,20" 
+                    AutomationProperties.Name="AI Features Section">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Enable AI-powered features for smarter time tracking and automatic project categorization. Your data remains private and is only shared with OpenAI when you enable this feature." 
                                TextWrapping="Wrap" Margin="0,0,0,10"/>
                     
-                    <CheckBox x:Name="EnableAICheckBox" Content="Enable _AI features (requires OpenAI API key)" 
+                    <CheckBox Grid.Row="1" x:Name="EnableAICheckBox" Content="Enable _AI features (requires OpenAI API key)" 
                               Margin="0,5,0,10"
-                              AutomationProperties.HelpText="Enables AI-powered automatic project categorization and summary generation"/>
+                              AutomationProperties.HelpText="Enables AI-powered automatic project categorization and summary generation"
+                              TabIndex="5"/>
                     
-                    <Grid IsEnabled="{Binding ElementName=EnableAICheckBox, Path=IsChecked}">
+                    <Grid Grid.Row="2" IsEnabled="{Binding ElementName=EnableAICheckBox, Path=IsChecked}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="300"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition/>
-                            <RowDefinition/>
-                            <RowDefinition/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
                         <TextBlock Text="OpenAI API Key:" Grid.Column="0" Grid.Row="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <PasswordBox x:Name="ApiKeyPasswordBox" Grid.Column="1" Grid.Row="0" PasswordChar="•" Margin="0,0,10,0"
                                      AutomationProperties.Name="OpenAI API Key"
                                      AutomationProperties.HelpText="Enter your OpenAI API key to enable AI features"
-                                     KeyDown="ApiKeyPasswordBox_KeyDown"/>
+                                     KeyDown="ApiKeyPasswordBox_KeyDown"
+                                     TabIndex="6"/>
                         <Button Content="_Save Key" Click="SaveApiKey_Click" Grid.Column="2" Grid.Row="0"
-                                AutomationProperties.HelpText="Save your OpenAI API key securely"/>
+                                AutomationProperties.HelpText="Save your OpenAI API key securely"
+                                TabIndex="7"/>
                         
                         <Button Content="_Test API Key" Click="TestApiKey_Click" Grid.Column="2" Grid.Row="1" Margin="0,5,0,0"
-                                AutomationProperties.HelpText="Test if the API key is valid"/>
+                                AutomationProperties.HelpText="Test if the API key is valid"
+                                TabIndex="8"/>
                         <TextBlock x:Name="ApiKeyTestResult" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
                                    Margin="0,5,10,0" VerticalAlignment="Center"/>
                         
@@ -93,32 +145,49 @@
                                    Text="Your API key is stored securely and is only used for authorized API calls." 
                                    FontStyle="Italic" FontSize="11" Margin="0,5,0,0"/>
                     </Grid>
-                </StackPanel>
+                </Grid>
             </GroupBox>
             
             <!-- Data Management -->
-            <GroupBox Header="Data Management" Padding="10" AutomationProperties.Name="Data Management Section">
-                <StackPanel>
-                    <TextBlock Text="Backup and restore application data to/from a file. Backup includes all tracked time, projects, and rules." 
+            <GroupBox Grid.Row="4" Header="Data Management" Padding="10" 
+                    AutomationProperties.Name="Data Management Section">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Backup and restore application data to/from a file. Backup includes all tracked time, projects, and rules." 
                                TextWrapping="Wrap" Margin="0,0,0,10"/>
                     
-                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                        <Button Content="_Backup Data" Click="BackupButton_Click"
-                                AutomationProperties.HelpText="Save all your data to a backup file"/>
-                        <Button Content="_Restore Data" Click="RestoreButton_Click" Margin="10,0,0,0"
-                                AutomationProperties.HelpText="Restore your data from a backup file"/>
-                    </StackPanel>
+                    <Grid Grid.Row="1" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <Button Grid.Column="0" Content="_Backup Data" Click="BackupButton_Click"
+                                AutomationProperties.HelpText="Save all your data to a backup file"
+                                TabIndex="9"/>
+                        <Button Grid.Column="1" Content="_Restore Data" Click="RestoreButton_Click" Margin="10,0,0,0"
+                                AutomationProperties.HelpText="Restore your data from a backup file"
+                                TabIndex="10"/>
+                    </Grid>
                     
-                    <TextBlock Text="Clear all data (all tracked time entries, projects and rules will be permanently deleted)" 
+                    <TextBlock Grid.Row="2" Text="Clear all data (all tracked time entries, projects and rules will be permanently deleted)" 
                                TextWrapping="Wrap" Margin="0,20,0,5" Foreground="#CC0000"/>
-                    <Button Content="Clear _All Data" Click="ClearData_Click" 
+                    <Button Grid.Row="3" Content="Clear _All Data" Click="ClearData_Click" 
                             Background="#FFE0E0" Foreground="#CC0000" 
                             BorderBrush="#CC0000" FontWeight="Bold" 
                             HorizontalAlignment="Left" Padding="10,5"
                             AutomationProperties.Name="Clear All Data Button"
-                            AutomationProperties.HelpText="WARNING: This will permanently delete all your data"/>
-                </StackPanel>
+                            AutomationProperties.HelpText="WARNING: This will permanently delete all your data"
+                            TabIndex="11"/>
+                </Grid>
             </GroupBox>
-        </StackPanel>
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </UserControl> 

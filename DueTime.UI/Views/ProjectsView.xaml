@@ -6,68 +6,105 @@
              xmlns:local="clr-namespace:DueTime.UI"
              xmlns:vm="clr-namespace:DueTime.UI.ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800"
+             AutomationProperties.Name="Projects View">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="400"/>
+            <ColumnDefinition Width="400"/>
         </Grid.ColumnDefinitions>
         
         <!-- Projects Panel -->
-        <StackPanel Grid.Column="0" Margin="10">
-            <TextBlock Text="Projects" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" 
+        <Grid Grid.Column="0" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <TextBlock Grid.Row="0" Text="Projects" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" 
                       AutomationProperties.HeadingLevel="Level1"/>
             
             <!-- New project input with proper label -->
-            <Label Target="{Binding ElementName=ProjectNameTextBox}" Content="_New Project Name:" 
+            <Label Grid.Row="1" Target="{Binding ElementName=ProjectNameTextBox}" Content="_New Project Name:" 
                   TabIndex="0"
                   AutomationProperties.Name="New Project Name Label"/>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBox x:Name="ProjectNameTextBox" Width="200" Margin="0,0,10,0" 
+            
+            <Grid Grid.Row="2" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBox Grid.Column="0" x:Name="ProjectNameTextBox" Margin="0,0,10,0" 
                          Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}"
                          AutomationProperties.Name="New Project Name" 
                          AutomationProperties.HelpText="Enter a name for the new project"
                          TabIndex="1"
                          KeyDown="ProjectNameTextBox_KeyDown"/>
-                <Button Content="_Add Project" 
+                         
+                <Button Grid.Column="1" Content="_Add Project" 
                         Command="{Binding AddProjectCommand}"
                         IsDefault="True"
                         Click="AddProject_Click" 
                         TabIndex="2"
                         AutomationProperties.Name="Add Project Button"
                         ToolTip="Create a new project with the specified name" />
-            </StackPanel>
+            </Grid>
             
             <!-- Project list with improved accessibility -->
-            <Label Content="Existing Projects:" 
+            <Label Grid.Row="3" Content="Existing Projects:" 
                   Target="{Binding ElementName=ProjectsListView}"
                   AutomationProperties.Name="Existing Projects Label"/>
-            <ListView x:Name="ProjectsListView" Height="300" 
+                  
+            <ListView Grid.Row="4" x:Name="ProjectsListView" 
                       ItemsSource="{Binding Projects}"
                       TabIndex="3"
                       SelectedItem="{Binding SelectedProject, Mode=TwoWay}"
-                      AutomationProperties.Name="Projects List">
+                      AutomationProperties.Name="Projects List"
+                      KeyboardNavigation.TabNavigation="Local">
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Header="ID" DisplayMemberBinding="{Binding ProjectId}" Width="50"
+                        <GridViewColumn Header="ID" DisplayMemberBinding="{Binding ProjectId}" Width="Auto"
                                        AutomationProperties.Name="Project ID Column"/>
-                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="200"
+                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="300"
                                        AutomationProperties.Name="Project Name Column"/>
                     </GridView>
                 </ListView.View>
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Name, StringFormat='Project: {0}'}"/>
+                        <Setter Property="IsTabStop" Value="True"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
             </ListView>
-        </StackPanel>
+        </Grid>
         
         <!-- Rules Panel with improved accessibility -->
-        <StackPanel Grid.Column="1" Margin="10">
-            <TextBlock Text="Assignment Rules" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"
+        <Grid Grid.Column="1" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <TextBlock Grid.Row="0" Text="Assignment Rules" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"
                       AutomationProperties.HeadingLevel="Level1"/>
             
             <!-- Rule pattern input with label -->
-            <Label Content="_Rule Pattern (window/app contains):" 
+            <Label Grid.Row="1" Content="_Rule Pattern (window/app contains):" 
                   Target="{Binding ElementName=RulePatternTextBox}"
                   AutomationProperties.Name="Rule Pattern Label"/>
-            <TextBox x:Name="RulePatternTextBox" Width="300" Margin="0,0,0,10" 
+                  
+            <TextBox Grid.Row="2" x:Name="RulePatternTextBox" Margin="0,0,0,10" 
                      Text="{Binding NewRulePattern, UpdateSourceTrigger=PropertyChanged}"
                      ToolTip="Enter a keyword to match in window titles or application names"
                      TabIndex="4"
@@ -76,73 +113,96 @@
                      KeyDown="RulePatternTextBox_KeyDown"/>
             
             <!-- Helper buttons to help create rules -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <Button Content="Select _Window..." 
-                        Margin="0,0,10,0"
+            <Grid Grid.Row="3" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="200"/>
+                </Grid.ColumnDefinitions>
+                
+                <Button Grid.Column="0" Content="Select _Window..." 
+                        Margin="0,0,5,0"
                         Padding="5,3"
                         TabIndex="5"
                         Click="OnSelectWindowClick"
                         AutomationProperties.Name="Select Window Button"
                         ToolTip="Select from a list of currently open windows to create a rule" />
-                <Button Content="Select _Folder..." 
-                        Margin="0,0,0,0"
+                        
+                <Button Grid.Column="1" Content="Select _Folder..." 
+                        Margin="5,0,0,0"
                         Padding="5,3"
                         TabIndex="6"
                         Click="OnSelectFolderClick"
                         AutomationProperties.Name="Select Folder Button"
                         ToolTip="Choose a folder from your computer to create a rule" />
-            </StackPanel>
+            </Grid>
             
             <!-- Project selection with label -->
-            <Label Content="_Assign to Project:" 
+            <Label Grid.Row="4" Content="_Assign to Project:" 
                   Target="{Binding ElementName=ProjectsComboBox}"
                   AutomationProperties.Name="Assign to Project Label"/>
-            <ComboBox x:Name="ProjectsComboBox" Width="300" Margin="0,0,0,10"
+                  
+            <ComboBox Grid.Row="5" x:Name="ProjectsComboBox" Margin="0,0,0,10"
                       ItemsSource="{Binding Projects}"
                       TabIndex="7"
                       SelectedItem="{Binding SelectedProject}"
                       DisplayMemberPath="Name"
                       SelectedValuePath="ProjectId"
                       AutomationProperties.Name="Project Selection"
-                      ToolTip="Select a project to assign when the pattern matches"/>
+                      ToolTip="Select a project to assign when the pattern matches"
+                      IsTabStop="True"
+                      KeyboardNavigation.IsTabStop="True"/>
             
             <!-- Action buttons with better layout and accessibility -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <Button Content="Add _Rule" 
+            <Grid Grid.Row="6" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="200"/>
+                </Grid.ColumnDefinitions>
+                
+                <Button Grid.Column="0" Content="Add _Rule" 
                         Command="{Binding AddRuleCommand}"
                         Click="AddRule_Click" 
-                        Margin="0,0,10,0"
+                        Margin="0,0,5,0"
                         TabIndex="8"
                         AutomationProperties.Name="Add Rule Button"
                         ToolTip="Create a new rule that assigns the selected project when a window title or application matches the pattern" />
-                <Button Content="_Delete Selected Rule" 
+                        
+                <Button Grid.Column="1" Content="_Delete Selected Rule" 
                         Command="{Binding DeleteRuleCommand}" 
                         CommandParameter="{Binding SelectedRule}" 
                         TabIndex="9"
-                        Margin="0,0,0,0"
+                        Margin="5,0,0,0"
                         AutomationProperties.Name="Delete Rule Button"
                         ToolTip="Delete the currently selected rule"/>
-            </StackPanel>
+            </Grid>
             
             <!-- Rules list with improved accessibility -->
-            <Label Content="Existing Rules:" 
+            <Label Grid.Row="7" Content="Existing Rules:" 
                   Target="{Binding ElementName=RulesListView}"
                   AutomationProperties.Name="Existing Rules Label"/>
-            <ListView x:Name="RulesListView" Height="218"
+                  
+            <ListView Grid.Row="8" x:Name="RulesListView"
                       ItemsSource="{Binding Rules}"
                       TabIndex="10"
                       SelectedItem="{Binding SelectedRule, Mode=TwoWay}"
-                      AutomationProperties.Name="Rules List">
+                      AutomationProperties.Name="Rules List"
+                      KeyboardNavigation.TabNavigation="Local">
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Header="ID" DisplayMemberBinding="{Binding Id}" Width="50"
+                        <GridViewColumn Header="ID" DisplayMemberBinding="{Binding Id}" Width="Auto"
                                        AutomationProperties.Name="Rule ID Column"/>
-                        <GridViewColumn Header="Pattern" DisplayMemberBinding="{Binding Pattern}" Width="150"
+                        <GridViewColumn Header="Pattern" DisplayMemberBinding="{Binding Pattern}" Width="200"
                                        AutomationProperties.Name="Rule Pattern Column"/>
-                        <GridViewColumn Header="Project" DisplayMemberBinding="{Binding ProjectName}" Width="150"
+                        <GridViewColumn Header="Project" DisplayMemberBinding="{Binding ProjectName}" Width="200"
                                        AutomationProperties.Name="Rule Project Column"/>
                     </GridView>
                 </ListView.View>
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Pattern, StringFormat='Rule for {0}'}"/>
+                        <Setter Property="IsTabStop" Value="True"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
                 <ListView.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Delete Rule" 
@@ -152,6 +212,6 @@
                     </ContextMenu>
                 </ListView.ContextMenu>
             </ListView>
-        </StackPanel>
+        </Grid>
     </Grid>
 </UserControl> 

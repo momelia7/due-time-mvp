@@ -5,34 +5,58 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DueTime.UI"
         xmlns:views="clr-namespace:DueTime.UI.Views"
+        xmlns:fw="clr-namespace:SourceChord.FluentWPF;assembly=FluentWPF"
         mc:Ignorable="d"
         Title="DueTime - Time Tracking" 
         Height="600" Width="900"
-        MinHeight="450" MinWidth="650">
+        MinHeight="450" MinWidth="650"
+        fw:AcrylicWindow.Enabled="True"
+        fw:AcrylicWindow.AcrylicWindowStyle="None"
+        AutomationProperties.Name="DueTime Main Window">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <TabControl Grid.Row="0" AutomationProperties.Name="Main Navigation">
-            <TabItem Header="_Dashboard" AutomationProperties.Name="Dashboard Tab">
+        <TabControl Grid.Row="0" 
+                   AutomationProperties.Name="Main Navigation" 
+                   KeyboardNavigation.TabNavigation="Local"
+                   TabIndex="0">
+            <TabItem Header="_Dashboard" 
+                   AutomationProperties.Name="Dashboard Tab" 
+                   KeyboardNavigation.TabIndex="0">
                 <views:DashboardView />
             </TabItem>
-            <TabItem Header="_Projects" AutomationProperties.Name="Projects Tab">
+            <TabItem Header="_Analytics" 
+                   AutomationProperties.Name="Analytics Tab"
+                   KeyboardNavigation.TabIndex="1">
+                <views:AnalyticsView />
+            </TabItem>
+            <TabItem Header="_Projects" 
+                   AutomationProperties.Name="Projects Tab"
+                   KeyboardNavigation.TabIndex="2">
                 <views:ProjectsView />
             </TabItem>
-            <TabItem Header="_Settings" AutomationProperties.Name="Settings Tab">
+            <TabItem Header="_Settings" 
+                   AutomationProperties.Name="Settings Tab"
+                   KeyboardNavigation.TabIndex="3">
                 <views:SettingsView />
             </TabItem>
         </TabControl>
         
         <StatusBar Grid.Row="1" Height="24">
             <StatusBarItem>
-                <TextBlock x:Name="StatusText" Text="{Binding StatusMessage}" />
+                <TextBlock x:Name="StatusText" 
+                         Text="{Binding StatusMessage}" 
+                         AutomationProperties.Name="Status Message"/>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <ProgressBar x:Name="StatusProgress" Width="100" Height="16" Visibility="Collapsed" IsIndeterminate="True" />
+                <ProgressBar x:Name="StatusProgress" 
+                           Width="100" Height="16" 
+                           Visibility="Collapsed" 
+                           IsIndeterminate="True"
+                           AutomationProperties.Name="Status Progress"/>
             </StatusBarItem>
         </StatusBar>
     </Grid>

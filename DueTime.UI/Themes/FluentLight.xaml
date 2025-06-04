@@ -1,0 +1,73 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:fw="clr-namespace:SourceChord.FluentWPF;assembly=FluentWPF">
+
+    <!-- Light Theme Colors -->
+    <Color x:Key="ThemeBackgroundColor">#FFFFFFFF</Color>
+    <Color x:Key="ThemeForegroundColor">#FF000000</Color>
+    <Color x:Key="ThemeAccentColor">#FF0078D7</Color>
+    <Color x:Key="ThemeCardBackgroundColor">#FFF3F3F3</Color>
+    <Color x:Key="ThemeBorderColor">#FFE6E6E6</Color>
+    <Color x:Key="ThemeHighlightColor">#FF0078D7</Color>
+    
+    <!-- Light Theme Brushes -->
+    <SolidColorBrush x:Key="ThemeBackgroundBrush" Color="{StaticResource ThemeBackgroundColor}" />
+    <SolidColorBrush x:Key="ThemeForegroundBrush" Color="{StaticResource ThemeForegroundColor}" />
+    <SolidColorBrush x:Key="ThemeAccentBrush" Color="{StaticResource ThemeAccentColor}" />
+    <SolidColorBrush x:Key="ThemeCardBackgroundBrush" Color="{StaticResource ThemeCardBackgroundColor}" />
+    <SolidColorBrush x:Key="ThemeBorderBrush" Color="{StaticResource ThemeBorderColor}" />
+    <SolidColorBrush x:Key="ThemeHighlightBrush" Color="{StaticResource ThemeHighlightColor}" />
+    
+    <!-- Acrylic Brushes for Light Theme -->
+    <fw:AcrylicBrush x:Key="WindowAcrylicBrush" 
+                     TintColor="#FFFFFF" 
+                     TintOpacity="0.8" 
+                     NoiseOpacity="0.03" />
+    
+    <fw:AcrylicBrush x:Key="SidebarAcrylicBrush" 
+                     TintColor="#F0F0F0" 
+                     TintOpacity="0.85" 
+                     NoiseOpacity="0.02" />
+    
+    <!-- Control Style Overrides for Light Theme -->
+    <Style x:Key="FluentButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource ThemeCardBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
+        <Setter Property="Padding" Value="12,6" />
+    </Style>
+    
+    <Style x:Key="FluentTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Background" Value="{StaticResource ThemeBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
+        <Setter Property="Padding" Value="6,4" />
+    </Style>
+    
+    <Style x:Key="FluentCheckBoxStyle" TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
+    </Style>
+    
+    <Style x:Key="FluentTabItemStyle" TargetType="TabItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
+        <Setter Property="Padding" Value="12,6" />
+    </Style>
+
+    <Style x:Key="FluentGroupBoxStyle" TargetType="GroupBox">
+        <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
+    </Style>
+    
+    <!-- Light Theme Window Style -->
+    <Style x:Key="FluentWindowStyle" TargetType="Window">
+        <Setter Property="Background" Value="{StaticResource WindowAcrylicBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
+        <Setter Property="fw:AcrylicWindow.Enabled" Value="True" />
+        <Setter Property="fw:AcrylicWindow.AcrylicWindowStyle" Value="None" />
+        <Setter Property="fw:AcrylicWindow.NoiseOpacity" Value="0.02" />
+        <Setter Property="fw:AcrylicWindow.TintOpacity" Value="0.8" />
+        <Setter Property="fw:AcrylicWindow.TintColor" Value="#FFFFFF" />
+    </Style>
+</ResourceDictionary> 

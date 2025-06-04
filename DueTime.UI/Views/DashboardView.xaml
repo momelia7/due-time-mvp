@@ -6,11 +6,12 @@
              xmlns:local="clr-namespace:DueTime.UI"
              xmlns:vm="clr-namespace:DueTime.UI.ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800"
+             AutomationProperties.Name="Dashboard View">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="400"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
@@ -35,19 +36,20 @@
                   TabIndex="1"
                   AutomationProperties.Name="Time Entries List"
                   AutomationProperties.HelpText="List of your tracked time entries for today"
-                  EnableRowVirtualization="True">
+                  EnableRowVirtualization="True"
+                  KeyboardNavigation.TabNavigation="Local">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime, StringFormat='HH:mm:ss'}" Width="80" IsReadOnly="True"
+                <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime, StringFormat='HH:mm:ss'}" Width="Auto" IsReadOnly="True"
                                   AutomationProperties.Name="Start Time Column"/>
-                <DataGridTextColumn Header="End Time" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="80" IsReadOnly="True"
+                <DataGridTextColumn Header="End Time" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="Auto" IsReadOnly="True"
                                   AutomationProperties.Name="End Time Column"/>
-                <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="80" IsReadOnly="True"
+                <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" Width="Auto" IsReadOnly="True"
                                   AutomationProperties.Name="Duration Column"/>
-                <DataGridTextColumn Header="Window Title" Binding="{Binding WindowTitle}" Width="200" IsReadOnly="True"
+                <DataGridTextColumn Header="Window Title" Binding="{Binding WindowTitle}" Width="300" IsReadOnly="True"
                                   AutomationProperties.Name="Window Title Column"/>
-                <DataGridTextColumn Header="Application" Binding="{Binding ApplicationName}" Width="120" IsReadOnly="True"
+                <DataGridTextColumn Header="Application" Binding="{Binding ApplicationName}" Width="Auto" IsReadOnly="True"
                                   AutomationProperties.Name="Application Column"/>
-                <DataGridComboBoxColumn x:Name="ProjectColumn" Header="Project" Width="150"
+                <DataGridComboBoxColumn x:Name="ProjectColumn" Header="Project" Width="Auto"
                                        SelectedValueBinding="{Binding ProjectId, Mode=TwoWay}"
                                        DisplayMemberPath="Name"
                                        SelectedValuePath="ProjectId"
@@ -55,15 +57,37 @@
                     <DataGridComboBoxColumn.ElementStyle>
                         <Style TargetType="ComboBox">
                             <Setter Property="ItemsSource" Value="{Binding DataContext.Projects, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                            <Setter Property="IsTabStop" Value="True"/>
                         </Style>
                     </DataGridComboBoxColumn.ElementStyle>
                     <DataGridComboBoxColumn.EditingElementStyle>
                         <Style TargetType="ComboBox">
                             <Setter Property="ItemsSource" Value="{Binding DataContext.Projects, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                            <Setter Property="IsTabStop" Value="True"/>
                         </Style>
                     </DataGridComboBoxColumn.EditingElementStyle>
                 </DataGridComboBoxColumn>
+                <!-- AI Suggest Button Column -->
+                <DataGridTemplateColumn Header="Actions" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Suggest" 
+                                    ToolTip="Get AI suggestion for project" 
+                                    Command="{Binding DataContext.SuggestProjectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                    CommandParameter="{Binding}"
+                                    Padding="5,2"
+                                    Visibility="{Binding ProjectId, Converter={StaticResource NullToVisibilityConverter}}"
+                                    AutomationProperties.Name="Suggest Project Button"
+                                    AutomationProperties.HelpText="Use AI to suggest a project for this entry"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="AutomationProperties.Name" Value="{Binding WindowTitle, StringFormat='Entry for {0}'}"/>
+                </Style>
+            </DataGrid.RowStyle>
         </DataGrid>
         
         <!-- Weekly Summary Button with improved accessibility -->

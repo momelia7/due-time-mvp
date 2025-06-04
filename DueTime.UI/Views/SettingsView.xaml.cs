@@ -548,7 +548,27 @@ namespace DueTime.UI.Views
         // Add handler for dark mode checkbox
         private void DarkModeCheckBox_Changed(object sender, RoutedEventArgs e)
         {
-            AppState.EnableDarkMode = DarkModeCheckBox.IsChecked ?? false;
+            bool isDarkModeEnabled = DarkModeCheckBox.IsChecked ?? false;
+            AppState.EnableDarkMode = isDarkModeEnabled;
+            
+            // Save the setting
+            SettingsManager.SaveSetting("EnableDarkMode", isDarkModeEnabled.ToString());
+            
+            // Apply the theme
+            var app = Application.Current as App;
+            if (app != null)
+            {
+                if (isDarkModeEnabled)
+                {
+                    app.ApplyDarkTheme();
+                    Logger.LogInfo("Dark mode enabled by user");
+                }
+                else
+                {
+                    app.ApplyLightTheme();
+                    Logger.LogInfo("Light mode enabled by user");
+                }
+            }
         }
 
         /// <summary>

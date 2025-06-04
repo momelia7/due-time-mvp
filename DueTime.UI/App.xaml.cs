@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using DueTime.Data;
+using DueTime.Tracking;
 using DueTime.UI.Utilities;
 using Microsoft.Win32;
 
@@ -49,6 +50,22 @@ namespace DueTime.UI
                 Logger.LogException(ex, "Checking startup registry");
             }
             
+            // Load dark mode setting
+            string? darkModeSetting = SettingsManager.GetSetting("EnableDarkMode");
+            AppState.EnableDarkMode = darkModeSetting == "True";
+            
+            // Apply theme based on setting
+            if (AppState.EnableDarkMode)
+            {
+                ApplyDarkTheme();
+                Logger.LogInfo("Applied dark theme");
+            }
+            else
+            {
+                ApplyLightTheme();
+                Logger.LogInfo("Applied light theme");
+            }
+            
             try
             {
                 // Load projects
@@ -93,6 +110,13 @@ namespace DueTime.UI
             
             // Handle trial period and license
             CheckTrialAndLicense();
+            
+            // Configure AI for TrackingService if it's available
+            if (AppState.TrackingService != null && AppState.AIEnabled && !string.IsNullOrEmpty(AppState.ApiKeyPlaintext))
+            {
+                AppState.TrackingService.ConfigureAI(true, AppState.ApiKeyPlaintext, AppState.ProjectRepo);
+                Logger.LogInfo("Configured TrackingService with AI project categorization");
+            }
         }
         
         private void SetupExceptionHandling()
@@ -233,6 +257,28 @@ namespace DueTime.UI
                 AppState.TrialExpired = false;
                 Logger.LogWarning("Error in license check - defaulting to trial active");
             }
+        }
+        
+        /// <summary>
+        /// Applies the light theme to the application
+        /// </summary>
+        public void ApplyLightTheme()
+        {
+            var resourceDictionaries = Resources.MergedDictionaries;
+            resourceDictionaries.Clear();
+            resourceDictionaries.Add(new ResourceDictionary { Source = new Uri("Themes/FluentLight.xaml", UriKind.Relative) });
+            AppState.EnableDarkMode = false;
+        }
+        
+        /// <summary>
+        /// Applies the dark theme to the application
+        /// </summary>
+        public void ApplyDarkTheme()
+        {
+            var resourceDictionaries = Resources.MergedDictionaries;
+            resourceDictionaries.Clear();
+            resourceDictionaries.Add(new ResourceDictionary { Source = new Uri("Themes/FluentDark.xaml", UriKind.Relative) });
+            AppState.EnableDarkMode = true;
         }
     }
 }

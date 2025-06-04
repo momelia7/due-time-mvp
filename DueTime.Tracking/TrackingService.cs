@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using DueTime.Data;
 
 namespace DueTime.Tracking
@@ -15,18 +18,72 @@ namespace DueTime.Tracking
         private Timer? _idleTimer;
         private string _lastWindowTitle = string.Empty;
         private string _lastAppName = string.Empty;
+        private bool _isTracking;
+        
+        // AI-related fields
+        private bool _useAI = false;
+        private string? _apiKey = null;
+        private List<string> _projectNames = new List<string>();
+        private IProjectRepository? _projectRepository;
         
         public event EventHandler<TimeEntryRecordedEventArgs>? TimeEntryRecorded;
+        public event EventHandler<TrackingStatusChangedEventArgs>? StatusChanged;
+
+        /// <summary>
+        /// Gets whether the tracking service is currently active
+        /// </summary>
+        public bool IsTracking => _isTracking;
+        
+        /// <summary>
+        /// Gets the current time entry being tracked, if any
+        /// </summary>
+        public TimeEntry? CurrentEntry => _currentEntry;
 
         public TrackingService(ISystemEvents systemEvents, ITimeEntryRepository repository)
         {
             _systemEvents = systemEvents;
             _repository = repository;
             _isIdle = false;
+            _isTracking = false;
+        }
+        
+        /// <summary>
+        /// Configures AI-powered project categorization
+        /// </summary>
+        public void ConfigureAI(bool useAI, string? apiKey, IProjectRepository projectRepository)
+        {
+            _useAI = useAI;
+            _apiKey = apiKey;
+            _projectRepository = projectRepository;
+            
+            // Load project names for AI categorization
+            if (_useAI && _projectRepository != null)
+            {
+                LoadProjectNames();
+            }
+        }
+        
+        private async void LoadProjectNames()
+        {
+            try
+            {
+                if (_projectRepository != null)
+                {
+                    var projects = await _projectRepository.GetAllProjectsAsync();
+                    _projectNames = projects.Select(p => p.Name).ToList();
+                    Debug.WriteLine($"Loaded {_projectNames.Count} project names for AI categorization");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading project names: {ex.Message}");
+            }
         }
 
         public void Start()
         {
+            if (_isTracking) return; // Already tracking
+            
             _systemEvents.WindowChanged += OnWindowChanged;
             _systemEvents.IdleStateChanged += OnIdleStateChanged;
             _systemEvents.Start();
@@ -34,11 +91,15 @@ namespace DueTime.Tracking
             // Create an idle check timer (every minute)
             _idleTimer = new Timer(CheckIdleTimeout, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
             
+            _isTracking = true;
+            OnStatusChanged(true, "Tracking started");
             Debug.WriteLine("Tracking service started");
         }
 
         public void Stop()
         {
+            if (!_isTracking) return; // Not tracking
+            
             _systemEvents.WindowChanged -= OnWindowChanged;
             _systemEvents.IdleStateChanged -= OnIdleStateChanged;
             _systemEvents.Stop();
@@ -57,10 +118,12 @@ namespace DueTime.Tracking
                 Debug.WriteLine("Final time entry saved on tracking stop");
             }
             
+            _isTracking = false;
+            OnStatusChanged(false, "Tracking stopped");
             Debug.WriteLine("Tracking service stopped");
         }
 
-        private void OnWindowChanged(object? sender, WindowChangedEventArgs e)
+        private async void OnWindowChanged(object? sender, WindowChangedEventArgs e)
         {
             if (_isIdle) return; // Don't create entries while idle
             
@@ -74,7 +137,14 @@ namespace DueTime.Tracking
             if (_currentEntry != null)
             {
                 _currentEntry.EndTime = now;
-                _repository.AddTimeEntryAsync(_currentEntry).Wait();
+                
+                // Try AI categorization if enabled
+                if (_useAI && !string.IsNullOrEmpty(_apiKey) && _projectNames.Count > 0 && _currentEntry.ProjectId == null)
+                {
+                    await TryAICategorization(_currentEntry);
+                }
+                
+                await _repository.AddTimeEntryAsync(_currentEntry);
                 OnTimeEntryRecorded(_currentEntry);
                 
                 Debug.WriteLine($"Time entry ended due to window change: {_currentEntry.WindowTitle} ({_currentEntry.ApplicationName})");
@@ -91,8 +161,43 @@ namespace DueTime.Tracking
             
             Debug.WriteLine($"New time entry started: {e.WindowTitle} ({e.ApplicationName})");
         }
+        
+        private async Task TryAICategorization(TimeEntry entry)
+        {
+            try
+            {
+                if (!_useAI || string.IsNullOrEmpty(_apiKey) || _projectNames.Count == 0 || _projectRepository == null)
+                    return;
+                
+                // Get project suggestion from OpenAI
+                string? projectSuggestion = await OpenAIClient.GetProjectSuggestionAsync(
+                    entry.WindowTitle,
+                    entry.ApplicationName,
+                    _projectNames.ToArray(),
+                    _apiKey);
+                
+                if (!string.IsNullOrEmpty(projectSuggestion) && projectSuggestion != "None")
+                {
+                    // Find the project ID for the suggested project name
+                    var projects = await _projectRepository.GetAllProjectsAsync();
+                    var matchingProject = projects.FirstOrDefault(p => 
+                        string.Equals(p.Name, projectSuggestion, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (matchingProject != null)
+                    {
+                        entry.ProjectId = matchingProject.ProjectId;
+                        Debug.WriteLine($"AI categorized entry to project: {matchingProject.Name}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in AI categorization: {ex.Message}");
+                // Continue without AI categorization
+            }
+        }
 
-        private void OnIdleStateChanged(object? sender, IdleStateChangedEventArgs e)
+        private async void OnIdleStateChanged(object? sender, IdleStateChangedEventArgs e)
         {
             var now = DateTime.Now;
             
@@ -105,19 +210,28 @@ namespace DueTime.Tracking
                 {
                     // Complete the current entry when going idle
                     _currentEntry.EndTime = now;
-                    _repository.AddTimeEntryAsync(_currentEntry).Wait();
+                    
+                    // Try AI categorization if enabled
+                    if (_useAI && !string.IsNullOrEmpty(_apiKey) && _projectNames.Count > 0 && _currentEntry.ProjectId == null)
+                    {
+                        await TryAICategorization(_currentEntry);
+                    }
+                    
+                    await _repository.AddTimeEntryAsync(_currentEntry);
                     OnTimeEntryRecorded(_currentEntry);
                     _currentEntry = null;
                     
                     Debug.WriteLine("Time entry ended due to system idle");
                 }
                 
+                OnStatusChanged(true, "System idle started");
                 Debug.WriteLine("System idle started");
             }
             else
             {
                 // Coming back from idle
                 _isIdle = false;
+                OnStatusChanged(true, "System idle ended");
                 Debug.WriteLine("System idle ended");
                 
                 // Get the current window info
@@ -185,18 +299,27 @@ namespace DueTime.Tracking
             }
         }
         
-        private void CheckIdleTimeout(object? state)
+        private async void CheckIdleTimeout(object? state)
         {
-            // This is a safety check in case the idle events aren't detected
-            if (_currentEntry != null && (DateTime.Now - _currentEntry.StartTime).TotalMinutes > 30)
+            // This is called periodically to check if we should close entries after long idle periods
+            if (!_isTracking || _isIdle || _currentEntry == null) return;
+            
+            // Check if the current entry has been open for too long (e.g., 30 minutes)
+            // This can happen if the idle detection fails for some reason
+            var now = DateTime.Now;
+            var duration = now - _currentEntry.StartTime;
+            
+            if (duration.TotalMinutes > 30)
             {
-                // If an entry has been active for too long, close it
-                _currentEntry.EndTime = DateTime.Now;
-                _repository.AddTimeEntryAsync(_currentEntry).Wait();
+                Debug.WriteLine("Entry duration exceeds 30 minutes, closing as a precaution");
+                
+                _currentEntry.EndTime = now;
+                await _repository.AddTimeEntryAsync(_currentEntry);
                 OnTimeEntryRecorded(_currentEntry);
                 _currentEntry = null;
                 
-                Debug.WriteLine("Time entry ended due to timeout (30+ minutes)");
+                // Get the current window to start a new entry
+                GetCurrentWindowAndCreateEntry();
             }
         }
         
@@ -204,18 +327,22 @@ namespace DueTime.Tracking
         {
             TimeEntryRecorded?.Invoke(this, new TimeEntryRecordedEventArgs(entry));
         }
-    }
-    
-    // Helper class for Win32 API calls
-    internal static class User32
-    {
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        public static extern IntPtr GetForegroundWindow();
         
-        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+        private void OnStatusChanged(bool isTracking, string reason)
+        {
+            StatusChanged?.Invoke(this, new TrackingStatusChangedEventArgs(isTracking, reason));
+        }
         
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+        internal static class User32
+        {
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            internal static extern IntPtr GetForegroundWindow();
+            
+            [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+            internal static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+            
+            [System.Runtime.InteropServices.DllImport("user32.dll")]
+            internal static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+        }
     }
 } 
