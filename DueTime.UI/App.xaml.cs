@@ -22,21 +22,28 @@ namespace DueTime.UI
         
         protected override void OnStartup(System.Windows.StartupEventArgs e)
         {
+            try
+            {
             base.OnStartup(e);
             
             // Set up global exception handlers for UI and background threads
+                Logger.LogInfo("Setting up exception handling");
             SetupExceptionHandling();
+                Logger.LogInfo("Exception handling setup complete");
             
             // Initialize database and load data
             Logger.LogInfo("Initializing database schema");
             Database.InitializeSchema();
+                Logger.LogInfo("Database schema initialization complete");
             
             // Check for saved API key and set AI enabled flag accordingly
+                Logger.LogInfo("Loading API key");
             AppState.ApiKeyPlaintext = SecureStorage.LoadApiKey();
             AppState.AIEnabled = (AppState.ApiKeyPlaintext != null);
             Logger.LogInfo($"AI features enabled: {AppState.AIEnabled}");
             
             // Check if app is set to run on startup
+                Logger.LogInfo("Checking startup registry");
             try
             {
                 var runKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", false);
@@ -51,10 +58,12 @@ namespace DueTime.UI
             }
             
             // Load dark mode setting
+                Logger.LogInfo("Loading dark mode setting");
             string? darkModeSetting = SettingsManager.GetSetting("EnableDarkMode");
             AppState.EnableDarkMode = darkModeSetting == "True";
             
             // Apply theme based on setting
+                Logger.LogInfo("Applying theme");
             if (AppState.EnableDarkMode)
             {
                 ApplyDarkTheme();
@@ -69,6 +78,7 @@ namespace DueTime.UI
             try
             {
                 // Load projects
+                    Logger.LogInfo("Loading projects");
                 var projList = AppState.ProjectRepo.GetAllProjectsAsync().Result;
                 AppState.Projects.Clear();
                 foreach(var proj in projList)
@@ -76,6 +86,7 @@ namespace DueTime.UI
                 Logger.LogInfo($"Loaded {AppState.Projects.Count} projects");
                 
                 // Load rules
+                    Logger.LogInfo("Loading rules");
                 var ruleList = AppState.RuleRepo.GetAllRulesAsync().Result;
                 AppState.Rules.Clear();
                 foreach(var rule in ruleList)
@@ -83,6 +94,7 @@ namespace DueTime.UI
                 Logger.LogInfo($"Loaded {AppState.Rules.Count} rules");
                 
                 // Load today's entries
+                    Logger.LogInfo("Loading today's time entries");
                 var entryList = AppState.EntryRepo.GetEntriesByDateAsync(DateTime.Today).Result;
                 AppState.Entries.Clear();
                 foreach(var entry in entryList)
@@ -102,20 +114,36 @@ namespace DueTime.UI
             {
                 Logger.LogException(ex, "Loading application data");
                 MessageBox.Show(
-                    "There was a problem loading application data. Please restart the application or contact support if the issue persists.",
+                        $"There was a problem loading application data:\n\n{ex.Message}\n\nPlease restart the application or contact support if the issue persists.",
                     "Data Loading Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
             
             // Handle trial period and license
+                Logger.LogInfo("Checking trial and license status");
             CheckTrialAndLicense();
             
             // Configure AI for TrackingService if it's available
+                Logger.LogInfo("Configuring TrackingService");
             if (AppState.TrackingService != null && AppState.AIEnabled && !string.IsNullOrEmpty(AppState.ApiKeyPlaintext))
             {
                 AppState.TrackingService.ConfigureAI(true, AppState.ApiKeyPlaintext, AppState.ProjectRepo);
                 Logger.LogInfo("Configured TrackingService with AI project categorization");
+                }
+                
+                Logger.LogInfo("Application startup completed successfully");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to start application: {ex.GetType().Name}\n{ex.Message}\n\nStack:\n{ex.StackTrace}",
+                    "Startup Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                
+                // Exit the application if startup fails
+                Shutdown(1);
             }
         }
         
@@ -126,7 +154,11 @@ namespace DueTime.UI
             {
                 Logger.LogException(e.Exception, "UI Thread (Unhandled)");
                 MessageBox.Show(
-                    "An unexpected error occurred and has been logged. Please restart the application if needed.",
+                    $"An unexpected error occurred:\n\n" +
+                    $"Type: {e.Exception.GetType().Name}\n" +
+                    $"Message: {e.Exception.Message}\n\n" +
+                    $"Stack Trace:\n{e.Exception.StackTrace}\n\n" +
+                    $"Please restart the application if needed.",
                     "Application Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);

@@ -7,6 +7,7 @@ namespace DueTime.Data
     public interface IProjectRepository
     {
         Task<int> AddProjectAsync(string name);
+
         Task<List<Project>> GetAllProjectsAsync();
         Task DeleteAllProjectsAsync();
     }

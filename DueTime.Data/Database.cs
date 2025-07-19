@@ -12,7 +12,7 @@ namespace DueTime.Data
         public static string DbPath { get; private set; }
         private static string _connectionString;
         
-        // Current schema version
+        // Current schema version - Updated for Tasks table
         private const int CurrentSchemaVersion = 2;
 
         static Database()
@@ -77,10 +77,10 @@ namespace DueTime.Data
             {
                 ApplyMigrationToV2(conn);
                 SetSchemaVersion(conn, 2);
+                currentVersion = 2;
             }
             
-            // Add future migrations here as needed
-            // if (currentVersion < 3) { ApplyMigrationToV3(conn); SetSchemaVersion(conn, 3); }
+
         }
         
         private static int GetSchemaVersion(SqliteConnection conn)
@@ -141,6 +141,8 @@ namespace DueTime.Data
             cmd.ExecuteNonQuery();
         }
 
+
+
         public static void BackupDatabase(string backupPath)
         {
             // Ensure any open connections are disposed before copying (in our usage pattern, they should be by now).
@@ -191,6 +193,56 @@ namespace DueTime.Data
             using FileStream outStream = File.Create(outputPath);
             using var cryptoStream = new CryptoStream(inStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
             cryptoStream.CopyTo(outStream);
+        }
+
+        public static void ForceInitializeForTesting(string connectionString)
+        {
+            _connectionString = connectionString;
+            
+            using var conn = GetConnection();
+            
+            // For testing, create the complete schema from scratch
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+            PRAGMA foreign_keys = ON;
+            
+            -- Create Projects table
+            CREATE TABLE IF NOT EXISTS Projects (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL UNIQUE
+            );
+            
+            -- Create TimeEntries table
+            CREATE TABLE IF NOT EXISTS TimeEntries (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                StartTime TEXT NOT NULL,
+                EndTime TEXT NOT NULL,
+                WindowTitle TEXT,
+                ApplicationName TEXT,
+                ProjectId INTEGER NULL,
+                FOREIGN KEY(ProjectId) REFERENCES Projects(Id)
+            );
+            
+            -- Create Rules table
+            CREATE TABLE IF NOT EXISTS Rules (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Pattern TEXT NOT NULL,
+                ProjectId INTEGER NOT NULL,
+                FOREIGN KEY(ProjectId) REFERENCES Projects(Id) ON DELETE CASCADE
+            );
+            
+            -- Create Settings table
+            CREATE TABLE IF NOT EXISTS Settings (
+                Key TEXT PRIMARY KEY,
+                Value TEXT
+            );
+            
+            -- Create all indexes
+            CREATE INDEX IF NOT EXISTS IX_TimeEntries_StartTime ON TimeEntries(StartTime);
+            CREATE INDEX IF NOT EXISTS IX_TimeEntries_ProjectId ON TimeEntries(ProjectId);";
+            cmd.ExecuteNonQuery();
+            
+            SetSchemaVersion(conn, CurrentSchemaVersion);
         }
     }
 } 

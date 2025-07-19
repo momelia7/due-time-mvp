@@ -17,15 +17,12 @@ namespace DueTime.Tests.ViewModelTests
             var entryRepoMock = new Mock<ITimeEntryRepository>();
             var projectRepoMock = new Mock<IProjectRepository>();
             
-            // Create a time entry
+            // Create a test entry
             var entry = new TimeEntry 
             { 
                 Id = 1, 
-                ProjectId = null, 
-                WindowTitle = "Test Window", 
-                ApplicationName = "TestApp", 
-                StartTime = DateTime.Now.AddHours(-1), 
-                EndTime = DateTime.Now 
+                WindowTitle = "Test Entry", 
+                ProjectId = null 
             };
             
             // Setup repositories
@@ -33,7 +30,7 @@ namespace DueTime.Tests.ViewModelTests
                 .ReturnsAsync(new List<TimeEntry> { entry });
                 
             entryRepoMock.Setup(repo => repo.UpdateEntryProjectAsync(It.IsAny<int>(), It.IsAny<int?>()))
-                .ReturnsAsync(true);
+                .Returns(Task.CompletedTask);
                 
             // Create viewmodel
             var viewModel = new DashboardViewModel(entryRepoMock.Object, projectRepoMock.Object);
@@ -54,7 +51,7 @@ namespace DueTime.Tests.ViewModelTests
         }
         
         [Fact]
-        public void ViewModel_LoadsDataOnInitialization()
+        public async Task ViewModel_LoadsDataOnInitialization()
         {
             // Arrange
             var entryRepoMock = new Mock<ITimeEntryRepository>();
@@ -82,7 +79,7 @@ namespace DueTime.Tests.ViewModelTests
             var viewModel = new DashboardViewModel(entryRepoMock.Object, projectRepoMock.Object);
             
             // Let async operations complete
-            Task.Delay(50).Wait();
+            await Task.Delay(50);
             
             // Assert: Collections were populated
             Assert.Equal(2, viewModel.TimeEntries.Count);
@@ -166,6 +163,9 @@ namespace DueTime.Tests.ViewModelTests
                 
                 // Create the view model
                 var viewModel = new DashboardViewModel(mockTimeEntryRepo.Object, mockProjectRepo.Object);
+                
+                // Let async operations complete
+                await Task.Delay(50);
                 
                 // Act
                 // Execute the command

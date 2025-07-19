@@ -7,7 +7,7 @@
         xmlns:views="clr-namespace:DueTime.UI.Views"
         xmlns:fw="clr-namespace:SourceChord.FluentWPF;assembly=FluentWPF"
         mc:Ignorable="d"
-        Title="DueTime - Time Tracking" 
+        Title="DueTime - Time Tracking and Task Management" 
         Height="600" Width="900"
         MinHeight="450" MinWidth="650"
         fw:AcrylicWindow.Enabled="True"
@@ -28,6 +28,7 @@
                    KeyboardNavigation.TabIndex="0">
                 <views:DashboardView />
             </TabItem>
+
             <TabItem Header="_Analytics" 
                    AutomationProperties.Name="Analytics Tab"
                    KeyboardNavigation.TabIndex="1">

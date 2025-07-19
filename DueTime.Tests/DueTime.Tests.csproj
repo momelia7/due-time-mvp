@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DueTime.Tracking\DueTime.Tracking.csproj" />
     <ProjectReference Include="..\DueTime.Data\DueTime.Data.csproj" />
+    <ProjectReference Include="..\DueTime.Service\DueTime.Service.csproj" />
     <ProjectReference Include="..\DueTime.UI\DueTime.UI.csproj" />
   </ItemGroup>
 

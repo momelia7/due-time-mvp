@@ -11,9 +11,15 @@ namespace DueTime.UI
         public static ObservableCollection<DueTime.Data.TimeEntry> Entries { get; } = new ObservableCollection<DueTime.Data.TimeEntry>();
         public static ObservableCollection<Project> Projects { get; } = new ObservableCollection<Project>();
         public static ObservableCollection<Rule> Rules { get; } = new ObservableCollection<Rule>();
-        public static SQLiteProjectRepository ProjectRepo { get; } = new SQLiteProjectRepository();
-        public static SQLiteTimeEntryRepository EntryRepo { get; } = new SQLiteTimeEntryRepository();
-        public static SQLiteRuleRepository RuleRepo { get; } = new SQLiteRuleRepository();
+        
+        // Lazy initialization to avoid static constructor issues
+        private static SQLiteProjectRepository? _projectRepo;
+        private static SQLiteTimeEntryRepository? _entryRepo;
+        private static SQLiteRuleRepository? _ruleRepo;
+        
+        public static SQLiteProjectRepository ProjectRepo => _projectRepo ??= new SQLiteProjectRepository();
+        public static SQLiteTimeEntryRepository EntryRepo => _entryRepo ??= new SQLiteTimeEntryRepository();
+        public static SQLiteRuleRepository RuleRepo => _ruleRepo ??= new SQLiteRuleRepository();
         // Settings and state flags
         public static bool RunOnStartup { get; set; } = false;
         public static bool EnableDarkMode { get; set; } = false;

@@ -22,6 +22,8 @@ namespace DueTime.Data
             return -1;
         }
 
+
+
         public async Task<List<Project>> GetAllProjectsAsync()
         {
             using var conn = Database.GetConnection();

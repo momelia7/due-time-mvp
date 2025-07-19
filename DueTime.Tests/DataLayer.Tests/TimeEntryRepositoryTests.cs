@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using DueTime.Data;
@@ -8,13 +9,13 @@ namespace DueTime.Tests.DataLayer
     public class TimeEntryRepositoryTests
     {
         [Fact]
-        public async Task GetTimeEntriesAsync_ReturnsEntries()
+        public async Task GetEntriesByDateAsync_ReturnsEntries()
         {
             // Arrange
             var repo = new SQLiteTimeEntryRepository();
             
             // Act
-            List<TimeEntry> entries = await repo.GetTimeEntriesAsync();
+            List<TimeEntry> entries = await repo.GetEntriesByDateAsync(DateTime.Today);
             
             // Assert: result is not null
             Assert.NotNull(entries);
@@ -25,12 +26,40 @@ namespace DueTime.Tests.DataLayer
         {
             // Arrange
             var repo = new SQLiteTimeEntryRepository();
-            var entry = new TimeEntry { StartTime = System.DateTime.Now, EndTime = System.DateTime.Now, WindowTitle = "Test", ApplicationName = "TestApp" };
+            var entry = new TimeEntry 
+            { 
+                StartTime = DateTime.Now.AddHours(-1), 
+                EndTime = DateTime.Now, 
+                WindowTitle = "Test", 
+                ApplicationName = "TestApp" 
+            };
             
             // Act
             await repo.AddTimeEntryAsync(entry);
             
-            // Assert: placeholder (if no exception, assume success)
+            // Assert: entry should have been assigned an ID
+            Assert.True(entry.Id > 0);
+        }
+        
+        [Fact]
+        public async Task UpdateEntryProjectAsync_UpdatesProject()
+        {
+            // Arrange
+            var repo = new SQLiteTimeEntryRepository();
+            var entry = new TimeEntry 
+            { 
+                StartTime = DateTime.Now.AddHours(-1), 
+                EndTime = DateTime.Now, 
+                WindowTitle = "Test Update", 
+                ApplicationName = "TestApp" 
+            };
+            
+            await repo.AddTimeEntryAsync(entry);
+            
+            // Act
+            await repo.UpdateEntryProjectAsync(entry.Id, 1);
+            
+            // Assert: no exception thrown
             Assert.True(true);
         }
     }
